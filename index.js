@@ -4,7 +4,7 @@ const passport = require("passport");
 const cookieSession = require("cookie-session");
 const modelo = require("./servidor/modelo.js");
 const fs = require("fs");
-const bodyParser = require("body-parser"); // AÑADIR ESTO
+const bodyParser = require("body-parser");
 
 const sistema = new modelo.Sistema();
 const app = express();
@@ -14,18 +14,28 @@ require("./servidor/passport-setup.js");
 
 const PORT = process.env.PORT || 3000;
 
-// MIDDLEWARES (AÑADIR bodyParser)
+// MIDDLEWARES BÁSICOS
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.get("/", function (request, response) {
+    let contenido = fs.readFileSync(__dirname + "/cliente/index.html", "utf8");
+    contenido = contenido.replace("GOOGLE_CLIENT_ID_PLACEHOLDER", process.env.GOOGLE_CLIENT_ID);
+    response.setHeader("Content-type", "text/html");
+    response.send(contenido);
+});
+
 app.use(express.static(__dirname + "/cliente"));
+
 app.use(cookieSession({
     name: 'Sistema',
     keys: ['key1', 'key2']
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+
 
 // RUTAS DE AUTENTICACIÓN
 app.get("/sesion", function (req, res) {
@@ -76,7 +86,7 @@ app.get("/google/callback",
     }
 );
 
-// ✅ GOOGLE ONE TAP 
+// ✅ GOOGLE ONE TAP - MEJORADO
 app.post('/oneTap/callback',
     passport.authenticate('google-one-tap', {
         session: false
@@ -87,9 +97,10 @@ app.post('/oneTap/callback',
             let userName = req.user.displayName || email;
             sistema.agregarUsuario(email);
             res.cookie('nick', userName);
-            res.json({ success: true, user: email });
+
+            res.redirect('/');
         } else {
-            res.json({ success: false, error: "No se pudo autenticar" });
+            res.redirect('/');
         }
     }
 );
