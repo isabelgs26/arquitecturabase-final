@@ -14,6 +14,12 @@ require("./servidor/passport-setup.js");
 
 const PORT = process.env.PORT || 3000;
 
+sistema.inicializar().then(() => {
+    console.log("Sistema inicializado con base de datos");
+}).catch(err => {
+    console.error("Error inicializando sistema:", err);
+});
+
 // MIDDLEWARES BÁSICOS
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -113,9 +119,14 @@ app.get("/good", function (request, response) {
     if (request.user && request.user.emails && request.user.emails[0]) {
         let email = request.user.emails[0].value;
         let userName = request.user.displayName || email;
-        response.cookie('nick', userName);
+
+        sistema.usuarioGoogle({ "email": email }, function (obj) {
+            response.cookie('nick', userName);
+            response.redirect('/');
+        });
+    } else {
+        response.redirect('/');
     }
-    response.redirect('/');
 });
 
 // RUTAS DE USUARIOS

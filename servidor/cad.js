@@ -1,6 +1,7 @@
-const mongo = require("mongodb").MongoClient;
-
 function CAD() {
+    const mongo = require("mongodb").MongoClient;
+    const ObjectId = require("mongodb").ObjectId;
+
     this.usuarios = null;
 
     // ========================
@@ -8,40 +9,61 @@ function CAD() {
     // ========================
     this.conectar = async function (callback) {
         let cad = this;
-        const client = new mongo(
-            "mongodb+srv://usuarioSistema:1006@cluster0.gsqlsou.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
-            { useUnifiedTopology: true }
-        );
-
+        const mongoUrl = process.env.MONGODB_URI;
+        let client = new mongo(mongoUrl, { useUnifiedTopology: true });
         await client.connect();
         const database = client.db("sistema");
         cad.usuarios = database.collection("usuarios");
         callback(database);
     }
 
-    this.buscarUsuario = function (criterio, callback) {
-        this.usuarios.findOne(criterio, function (err, usuario) {
-            if (err) {
-                console.error("Error buscando usuario:", err);
-                callback(null);
-            } else {
-                callback(usuario);
+    this.buscarOCrearUsuario = function (usr, callback) {
+        buscarOCrear(this.usuarios, usr, callback);
+    }
+    function buscarOCrear(coleccion, criterio, callback) {
+        coleccion.findOneAndUpdate(criterio, { $set: criterio }, {
+            upsert:
+                true, returnDocument: "after", projection: { email: 1 }
+        }, function (err, doc) {
+            if (err) { throw err; }
+            else {
+                console.log("Elemento actualizado");
+                console.log(doc.value.email);
+                callback({ email: doc.value.email });
             }
         });
     }
 
+
+    this.buscarUsuario = function (criterio, callback) {
+        buscar(this.usuarios, criterio, callback);
+    }
 
     this.insertarUsuario = function (usuario, callback) {
-        this.usuarios.insertOne(usuario, function (err, result) {
-            if (err) {
-                console.error("Error insertando usuario:", err);
-                callback(null);
+        insertar(this.usuarios, usuario, callback);
+    }
+
+    function buscar(coleccion, criterio, callback) {
+        coleccion.find(criterio).toArray(function (error, usuarios) {
+            if (usuarios.length == 0) {
+                callback(undefined);
             } else {
-                console.log("Usuario creado:", usuario.email || usuario.nick);
-                callback(usuario);
+                callback(usuarios[0]);
             }
         });
     }
+
+    function insertar(coleccion, elemento, callback) {
+        coleccion.insertOne(elemento, function (err, result) {
+            if (err) {
+                console.log("error");
+            } else {
+                console.log("Nuevo elemento creado");
+                callback(elemento);
+            }
+        });
+    }
+
 }
 
 module.exports.CAD = CAD;

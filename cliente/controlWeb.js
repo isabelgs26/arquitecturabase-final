@@ -12,6 +12,35 @@ function ControlWeb() {
         }
     };
 
+    this.mostrarRegistro = function () {
+        // Ocultar login y mostrar área de registro
+        $("#au").hide();
+        $("#registro").show().empty();
+
+        $("#registro").load("./cliente/registro.html", function () {
+            // Botón volver al login
+            $("#btnVolverLogin").on("click", function () {
+                $("#registro").hide().empty();
+                $("#au").show();
+            });
+
+            // Botón registrar
+            $("#btnRegistro").on("click", function (e) {
+                e.preventDefault();
+                let email = $("#email").val();
+                let pwd = $("#pwd").val();
+                let nombre = $("#nombre").val();
+                let apellidos = $("#apellidos").val();
+
+                if (email && pwd) {
+                    rest.registrarUsuario(email, pwd, nombre, apellidos);
+                    console.log("Registrando:", email, nombre, apellidos);
+                } else {
+                    alert("Por favor, completa email y contraseña");
+                }
+            });
+        });
+    }
     // === MOSTRAR/OCULTAR BOTÓN CERRAR SESIÓN ===
     this.mostrarBotonCerrarSesion = function () {
         $(".nav-item").hide();
@@ -33,36 +62,36 @@ function ControlWeb() {
         this.ocultarBotonCerrarSesion();
 
         let html = `
-        <div class="card mt-3">
-            <div class="card-body">
-                <h5>Acceder al Sistema</h5>
-                
-                <!-- Campos para registro/login -->
-                <div class="form-group">
-                    <label for="emailAcceso">Email:</label>
-                    <input type="email" class="form-control" id="emailAcceso" placeholder="tu@email.com" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="passwordAcceso">Contraseña:</label>
-                    <input type="password" class="form-control" id="passwordAcceso" placeholder="Tu contraseña" required>
-                </div>
-
-                <!-- Botones de acción -->
-                <button id="btnLogin" class="btn btn-primary">Iniciar Sesión</button>
-                <button id="btnRegistro" class="btn btn-success">Registrarse</button>
-
-                <hr>
-                
-                <!-- Login con Google -->
-                <div style="text-align:center">
-                    <p>O inicia sesión con:</p>
-                    <a href="/auth/google">
-                        <img src="/img/inicioGoogle.png" style="height:40px;">
-                    </a>
-                </div>
+    <div class="card mt-3">
+        <div class="card-body">
+            <h5>Acceder al Sistema</h5>
+            
+            <!-- Campos para registro/login -->
+            <div class="form-group">
+                <label for="emailAcceso">Email:</label>
+                <input type="email" class="form-control" id="emailAcceso" placeholder="tu@email.com">
             </div>
-        </div>`;
+            
+            <div class="form-group">
+                <label for="passwordAcceso">Contraseña:</label>
+                <input type="password" class="form-control" id="passwordAcceso" placeholder="Tu contraseña">
+            </div>
+
+            <!-- Botones de acción -->
+            <button id="btnLogin" class="btn btn-primary mr-2">Iniciar Sesión</button>
+            <button id="btnMostrarRegistro" class="btn btn-outline-secondary">Quiero Registrarme</button>
+
+            <hr>
+            
+            <!-- Login con Google -->
+            <div style="text-align:center">
+                <p>O inicia sesión con:</p>
+                <a href="/auth/google">
+                    <img src="/img/inicioGoogle.png" style="height:40px;">
+                </a>
+            </div>
+        </div>
+    </div>`;
 
         $("#au").append(html);
 
@@ -75,29 +104,12 @@ function ControlWeb() {
             if (email && password) {
                 rest.loginUsuario(email, password);
             } else {
-                alert("Por favor, completa todos los campos");
+                alert("Por favor, completa todos los campos para iniciar sesión");
             }
         });
-
-        // Evento para REGISTRARSE
-        $("#btnRegistro").on("click", function (e) {
+        $("#btnMostrarRegistro").on("click", function (e) {
             e.preventDefault();
-            let email = $("#emailAcceso").val().trim();
-            let password = $("#passwordAcceso").val().trim();
-
-            if (email && password) {
-                if (password.length < 6) {
-                    alert("La contraseña debe tener al menos 6 caracteres");
-                    return;
-                }
-                let usuario = {
-                    email: email,
-                    password: password
-                };
-                rest.registrarUsuario(usuario);
-            } else {
-                alert("Por favor, completa todos los campos");
-            }
+            cw.mostrarRegistro();
         });
     };
 

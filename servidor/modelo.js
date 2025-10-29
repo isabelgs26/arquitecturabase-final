@@ -5,12 +5,16 @@ function Sistema() {
     this.usuarios = {};
 
     this.inicializar = async function () {
-        console.log("Inicializando sistema...");
-        await this.cad.conectar(() => {
-            console.log("Sistema inicializado con base de datos");
+        console.log("Inicializando sistema y conexión a BD...");
+        await this.cad.conectar(function (db) {
+            console.log("Conectado a Mongo Atlas - Base de datos lista");
         });
     }
-
+    this.usuarioGoogle = function (usr, callback) {
+        this.cad.buscarOCrearUsuario(usr, function (obj) {
+            callback(obj);
+        });
+    }
     this.agregarUsuario = function (nick) {
         let res = { "nick": -1 };
         if (!this.usuarios[nick]) {

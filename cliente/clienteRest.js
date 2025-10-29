@@ -38,29 +38,30 @@ function ClienteRest() {
             console.log("Lista de usuarios:", data);
         });
     }
-
-    this.registrarUsuario = function (usuario) {
+    this.registrarUsuario = function (email, password, nombre, apellidos) {
         $.ajax({
             type: 'POST',
             url: '/registrarUsuario',
-            data: JSON.stringify(usuario),
+            data: JSON.stringify({
+                "email": email,
+                "password": password,
+                "nombre": nombre,
+                "apellidos": apellidos
+            }),
             success: function (data) {
                 if (data.nick != -1) {
                     console.log("Usuario " + data.nick + " ha sido registrado");
-                    cw.mostrarMensaje("¡Registro exitoso! Ahora puedes iniciar sesión");
-                    // Limpiar formulario
-                    $("#emailAcceso").val("");
-                    $("#passwordAcceso").val("");
-                }
-                else {
-                    console.log("El email ya está registrado");
-                    cw.mostrarMensaje("Error: El email ya está registrado");
+                    $.cookie("nick", data.nick);
+                    cw.limpiar();
+                    cw.mostrarMensaje("Bienvenido al sistema, " + data.nick);
+                } else {
+                    console.log("No se pudo registrar el usuario");
+                    cw.mostrarMensaje("Error: El usuario ya existe");
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
                 console.log("Status: " + textStatus);
                 console.log("Error: " + errorThrown);
-                cw.mostrarMensaje("Error en el registro");
             },
             contentType: 'application/json'
         });
