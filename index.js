@@ -9,6 +9,13 @@ const sistema = new modelo.Sistema();
 const app = express();
 require('dotenv').config();
 
+// ⬇️⬇️⬇️ AGREGA ESTO AQUÍ ⬇️⬇️⬇️
+console.log('=== VERIFICACIÓN .env ===');
+console.log('CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
+console.log('CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? '✅' : '❌');
+console.log('CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL);
+console.log('=== FIN VERIFICACIÓN ===');
+
 require("./servidor/passport-setup.js");
 
 const PORT = process.env.PORT || 3000;
