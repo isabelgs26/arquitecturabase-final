@@ -53,36 +53,51 @@ function Sistema() {
         return { "num": num };
     }
 
+    const bcrypt = require("bcrypt");
+
     this.registrarUsuario = function (obj, callback) {
         let modelo = this;
         if (!obj.nick) {
             obj.nick = obj.email;
         }
-        this.cad.buscarUsuario({ email: obj.email }, function (usr) {
-            if (!usr) {
-                modelo.cad.insertarUsuario(obj, function (res) {
-                    callback(res);
-                });
-            }
-            else {
-                callback({ "email": -1 });
-            }
-        });
-    }
 
-    this.loginUsuario = function (obj, callback) {
-        this.cad.buscarUsuario({ email: obj.email }, function (usr) {
-            if (usr && usr.password === obj.password) {
-                callback(usr);
+        this.cad.buscarUsuario({ email: obj.email }, async function (usr) {
+            if (!usr) {
+                try {
+                    const hash = await bcrypt.hash(obj.password, 10);
+                    obj.password = hash;
+                    modelo.cad.insertarUsuario(obj, function (res) {
+                        callback(res);
+                    });
+                } catch (error) {
+                    console.error("Error al cifrar la contraseña:", error);
+                    callback({ "email": -1 });
+                }
             } else {
                 callback({ "email": -1 });
             }
         });
+    };
+
+    this.loginUsuario = function (obj, callback) {
+        this.cad.buscarUsuario({ email: obj.email }, function (usr) {
+            if (!usr) {
+                callback({ "email": -1 });
+                return;
+            }
+            // 🔐 Comprobar contraseña cifrada
+            bcrypt.compare(obj.password, usr.password, function (err, ok) {
+                if (ok) {
+                    callback(usr);
+                } else {
+                    callback({ "email": -1 });
+                }
+            });
+        });
+    };
+
+    function Usuario(nick) {
+        this.nick = nick;
     }
 }
-
-function Usuario(nick) {
-    this.nick = nick;
-}
-
 module.exports.Sistema = Sistema;

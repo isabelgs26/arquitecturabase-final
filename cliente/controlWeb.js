@@ -13,34 +13,24 @@ function ControlWeb() {
     };
 
     this.mostrarRegistro = function () {
-        // Ocultar login y mostrar área de registro
-        $("#au").hide();
-        $("#registro").show().empty();
-
-        $("#registro").load("./cliente/registro.html", function () {
-            // Botón volver al login
-            $("#btnVolverLogin").on("click", function () {
-                $("#registro").hide().empty();
-                $("#au").show();
-            });
-
-            // Botón registrar
+        $("#fmRegistro").remove();
+        $("#au").load("./cliente/registro.html", function () {
             $("#btnRegistro").on("click", function (e) {
                 e.preventDefault();
-                let email = $("#email").val();
-                let pwd = $("#pwd").val();
-                let nombre = $("#nombre").val();
-                let apellidos = $("#apellidos").val();
+                let email = $("#email").val().trim();
+                let pwd = $("#pwd").val().trim();
+                let nombre = $("#nombre").val().trim();
+                let apellidos = $("#apellidos").val().trim();
 
                 if (email && pwd) {
                     rest.registrarUsuario(email, pwd, nombre, apellidos);
-                    console.log("Registrando:", email, nombre, apellidos);
                 } else {
-                    alert("Por favor, completa email y contraseña");
+                    alert("Por favor, rellena todos los campos");
                 }
             });
         });
-    }
+    };
+
     // === MOSTRAR/OCULTAR BOTÓN CERRAR SESIÓN ===
     this.mostrarBotonCerrarSesion = function () {
         $(".nav-item").hide();

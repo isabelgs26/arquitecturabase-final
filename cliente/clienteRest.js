@@ -66,6 +66,7 @@ function ClienteRest() {
             contentType: 'application/json'
         });
     }
+
     this.loginUsuario = function (email, password) {
         $.ajax({
             type: 'POST',
