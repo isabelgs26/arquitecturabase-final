@@ -26,6 +26,8 @@ app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// RUTA RAÍZ (index.html) CON PROCESAMIENTO
+// Esta ruta es necesaria para reemplazar el ID de Google
 app.get("/", function (request, response) {
     let contenido = fs.readFileSync(__dirname + "/cliente/index.html", "utf8");
     contenido = contenido.replace("GOOGLE_CLIENT_ID_PLACEHOLDER", process.env.GOOGLE_CLIENT_ID);
@@ -33,8 +35,11 @@ app.get("/", function (request, response) {
     response.send(contenido);
 });
 
+// MIDDLEWARE DE ESTÁTICOS
+// Esta línea sirve TODOS los demás archivos en /cliente (como registro.html, css, js)
 app.use(express.static(__dirname + "/cliente"));
 
+// CONFIGURACIÓN DE SESIÓN Y PASSPORT
 app.use(cookieSession({
     name: 'Sistema',
     keys: ['key1', 'key2']
@@ -68,13 +73,7 @@ app.get("/cerrarSession", function (req, res) {
     });
 });
 
-// RUTA PRINCIPAL
-app.get("/", function (request, response) {
-    let contenido = fs.readFileSync(__dirname + "/cliente/index.html", "utf8");
-    contenido = contenido.replace("GOOGLE_CLIENT_ID_PLACEHOLDER", process.env.GOOGLE_CLIENT_ID);
-    response.setHeader("Content-type", "text/html");
-    response.send(contenido);
-});
+// SE HA ELIMINADO LA RUTA DUPLICADA app.get("/") QUE ESTABA AQUÍ
 
 // GOOGLE OAUTH TRADICIONAL
 app.get("/auth/google", passport.authenticate('google', { scope: ['profile', 'email'] }));
@@ -92,7 +91,7 @@ app.get("/google/callback",
     }
 );
 
-// ✅ GOOGLE ONE TAP - MEJORADO
+// GOOGLE ONE TAP
 app.post('/oneTap/callback',
     passport.authenticate('google-one-tap', {
         session: false
@@ -103,7 +102,6 @@ app.post('/oneTap/callback',
             let userName = req.user.displayName || email;
             sistema.agregarUsuario(email);
             res.cookie('nick', userName);
-
             res.redirect('/');
         } else {
             res.redirect('/');
@@ -129,7 +127,7 @@ app.get("/good", function (request, response) {
     }
 });
 
-// RUTAS DE USUARIOS
+// RUTAS DE USUARIOS (GESTIÓN ANTIGUA - A REVISAR SI AÚN SE USA)
 app.get("/agregarUsuario/:nick/:email/:password", function (request, response) {
     let nick = request.params.nick;
     let email = request.params.email;
@@ -166,7 +164,7 @@ app.get("/eliminarUsuario/:nick", function (req, res) {
     res.json(resultado);
 });
 
-// REGISTRO Y LOGIN
+// RUTAS DE REGISTRO Y LOGIN LOCAL
 app.post("/registrarUsuario", function (req, res) {
     let obj = req.body;
     sistema.registrarUsuario(obj, function (resultado) {
@@ -192,4 +190,3 @@ app.post("/loginUsuario", function (req, res) {
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
-

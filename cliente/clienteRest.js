@@ -1,4 +1,5 @@
-function ClienteRest() {
+function ClienteRest(controlWeb) {
+    let cw = controlWeb;
 
     this.agregarUsuario = function (nick) {
         $.getJSON("/agregarUsuario/" + nick, function (data) {
@@ -52,21 +53,21 @@ function ClienteRest() {
                 if (data.nick != -1) {
                     console.log("Usuario " + data.nick + " ha sido registrado");
                     $.cookie("nick", data.nick);
-                    cw.limpiar();
-                    cw.mostrarMensaje("Bienvenido al sistema, " + data.nick);
+                    cw.limpiar(); // 'cw' ahora SÍ existe
+                    cw.mostrarMensaje("Bienvenido al sistema, " + data.nick + ". Revisa tu email para confirmar.", "exito");
                 } else {
                     console.log("No se pudo registrar el usuario");
-                    cw.mostrarMensaje("Error: El usuario ya existe");
+                    cw.mostrarMensaje("Error: El usuario (email) ya existe", "error");
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
                 console.log("Status: " + textStatus);
                 console.log("Error: " + errorThrown);
+                cw.mostrarMensaje("Error en el servidor. Inténtalo más tarde.", "error");
             },
             contentType: 'application/json'
         });
     }
-
     this.loginUsuario = function (email, password) {
         $.ajax({
             type: 'POST',
@@ -76,22 +77,23 @@ function ClienteRest() {
                 if (data.nick != -1) {
                     console.log("Usuario " + data.nick + " ha iniciado sesión");
                     $.cookie("nick", data.nick);
-                    ws.email = data.nick;
+
                     cw.limpiar();
                     cw.mostrarHome();
                 }
                 else {
                     console.log("Usuario o clave incorrectos");
+                    cw.mostrarMensaje("Email o contraseña incorrectos", "error");
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
                 console.log("Status: " + textStatus);
                 console.log("Error: " + errorThrown);
+                cw.mostrarMensaje("Error en el servidor al iniciar sesión.", "error");
             },
             contentType: 'application/json'
         });
     }
-
     this.numeroUsuarios = function () {
         $.getJSON("/numeroUsuarios", function (data) {
             console.log("Datos recibidos del servidor:", data);

@@ -14,7 +14,9 @@ function ControlWeb() {
 
     this.mostrarRegistro = function () {
         $("#fmRegistro").remove();
-        $("#au").load("./cliente/registro.html", function () {
+
+        $("#au").load("./registro.html", function () {
+
             $("#btnRegistro").on("click", function (e) {
                 e.preventDefault();
                 let email = $("#email").val().trim();
@@ -25,7 +27,7 @@ function ControlWeb() {
                 if (email && pwd) {
                     rest.registrarUsuario(email, pwd, nombre, apellidos);
                 } else {
-                    alert("Por favor, rellena todos los campos");
+                    cw.mostrarMensaje("Por favor, rellena todos los campos. El email y la contraseña son obligatorios.");
                 }
             });
         });
@@ -94,9 +96,11 @@ function ControlWeb() {
             if (email && password) {
                 rest.loginUsuario(email, password);
             } else {
-                alert("Por favor, completa todos los campos para iniciar sesión");
+                cw.mostrarMensaje("Por favor, completa todos los campos para iniciar sesión");
             }
         });
+
+        // Evento para MOSTRAR REGISTRO
         $("#btnMostrarRegistro").on("click", function (e) {
             e.preventDefault();
             cw.mostrarRegistro();
@@ -114,8 +118,11 @@ function ControlWeb() {
     this.salir = function () {
         $.removeCookie("nick");
         this.ocultarBotonCerrarSesion();
-        alert("Sesión cerrada correctamente. ¡Hasta pronto!");
-        location.reload();
+        cw.mostrarMensaje("Sesión cerrada correctamente. ¡Hasta pronto!");
+
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
     };
 
     // === VER USUARIOS ===
@@ -168,7 +175,7 @@ function ControlWeb() {
         $("#btnEU").on("click", function () {
             let nick = $("#nickEliminar").val().trim();
             if (nick) rest.eliminarUsuario(nick);
-            else alert("Por favor, introduce un nick válido");
+            else cw.mostrarMensaje("Por favor, introduce un nick válido");
         });
     };
 
@@ -178,7 +185,7 @@ function ControlWeb() {
         let html = `
         <div id="mNU" class="form-group">
             <button id="btnNU" class="btn btn-warning">Consultar Número de Usuarios</button>
-            <div id="resultadoNumero" class="mt-3 alert alert-info"></div>
+            <div id="resultadoNumero" class="mt-3 alert alert-info" style="display:none;"></div>
         </div>`;
         $("#au").html(html);
 
@@ -208,7 +215,7 @@ function ControlWeb() {
                         : `<div class="alert alert-danger">El usuario <strong>${nick}</strong> no existe</div>`;
                     $("#resultadoEstado").html(resultado);
                 });
-            } else alert("Introduce un nick válido");
+            } else cw.mostrarMensaje("Introduce un nick válido");
         });
     };
 
@@ -217,8 +224,23 @@ function ControlWeb() {
         $("#au").empty();
     };
 
-    this.mostrarMensaje = function (msg) {
-        let html = `<div class="alert alert-success">${msg}</div>`;
-        $("#au").append(html);
+    this.mostrarMensaje = function (msg, tipo = "info") {
+        let claseAlerta = "alert-info"; // Por defecto
+        if (tipo === "exito") {
+            claseAlerta = "alert-success";
+        } else if (tipo === "error") {
+            claseAlerta = "alert-danger";
+        }
+
+        $("#msg").remove();
+
+        let html = `<div id="msg" class="alert ${claseAlerta} alert-dismissible fade show" role="alert">
+                        ${msg}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>`;
+
+        $("#au").prepend(html);
     };
 }

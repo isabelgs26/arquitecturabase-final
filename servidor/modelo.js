@@ -55,24 +55,26 @@ function Sistema() {
 
     const bcrypt = require("bcrypt");
 
+    // 📄 Código Corregido para registrarUsuario
     this.registrarUsuario = function (obj, callback) {
         let modelo = this;
         if (!obj.nick) {
             obj.nick = obj.email;
         }
 
-        this.cad.buscarUsuario({ email: obj.email }, async function (usr) {
+        this.cad.buscarUsuario({ email: obj.email }, function (usr) {
             if (!usr) {
-                try {
-                    const hash = await bcrypt.hash(obj.password, 10);
+                bcrypt.hash(obj.password, 10, function (err, hash) {
+                    if (err) {
+                        console.error("Error al cifrar la contraseña:", err);
+                        return callback({ "email": -1 });
+                    }
+
                     obj.password = hash;
                     modelo.cad.insertarUsuario(obj, function (res) {
                         callback(res);
                     });
-                } catch (error) {
-                    console.error("Error al cifrar la contraseña:", error);
-                    callback({ "email": -1 });
-                }
+                });
             } else {
                 callback({ "email": -1 });
             }
