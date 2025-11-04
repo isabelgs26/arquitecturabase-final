@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require("express");
 const path = require("path");
 const passport = require("passport");
@@ -6,9 +8,8 @@ const modelo = require("./servidor/modelo.js");
 const fs = require("fs");
 const bodyParser = require("body-parser");
 
-const sistema = new modelo.Sistema([test: false]);
+const sistema = new modelo.Sistema({ test: false });
 const app = express();
-require('dotenv').config();
 
 require("./servidor/passport-setup.js");
 
@@ -49,9 +50,8 @@ app.get("/sesion", function (req, res) {
 });
 
 app.get("/cerrarSession", function (req, res) {
-    if (req.user && req.user.emails && req.user.emails[0]) {
-        let email = req.user.emails[0].value;
-        sistema.eliminarUsuario(email); // Esto es de la memoria local, está bien para 'salir'
+    if (req.user && req.user.email) {
+        sistema.eliminarUsuario(req.user.email); // Esto es de la memoria local
     }
     req.logout(function (err) {
         if (err) { return res.status(500).json({ error: "Error al cerrar sesión" }); }
@@ -71,11 +71,10 @@ app.get("/auth/google", passport.authenticate('google', { scope: ['profile', 'em
 app.get("/google/callback",
     passport.authenticate('google', { failureRedirect: '/' }),
     function (req, res) {
-        if (req.user && req.user.emails && req.user.emails[0]) {
-            let email = req.user.emails[0].value;
-            let userName = req.user.displayName || email;
+        if (req.user && req.user.email) {
+            let email = req.user.email;
+            let userName = req.user.nombre || email;
 
-            // Pasar 'nombre' para que se guarde en la BD
             sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
                 console.log("Usuario de Google (callback) PROCESADO EN BD:", obj.email);
                 res.cookie('nick', userName);
@@ -97,7 +96,6 @@ app.post('/oneTap/callback',
             let email = req.user.emails[0].value;
             let userName = req.user.displayName || email;
 
-            // Pasar 'nombre' para que se guarde en la BD
             sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
                 console.log("Usuario de Google (One Tap) PROCESADO EN BD:", obj.email);
                 res.cookie('nick', userName);
@@ -114,16 +112,16 @@ app.get("/fallo", function (request, response) {
 });
 
 app.get("/good", function (request, response) {
-    if (request.user && req.user.emails && req.user.emails[0]) {
-        let email = req.user.emails[0].value;
-        let userName = req.user.displayName || email;
+    if (req.user && req.user.email) {
+        let email = req.user.email;
+        let userName = req.user.nombre || email;
 
         sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
             response.cookie('nick', userName);
             response.redirect('/');
         });
     } else {
-        response.redirect('/');
+        res.redirect('/');
     }
 });
 
@@ -162,9 +160,7 @@ app.post("/loginUsuario", function (req, res) {
     });
 });
 
-
-
-// INICIO DEL SERVIDOR (Correcto)
+// INICIO DEL SERVIDOR 
 sistema.inicializar().then(() => {
     console.log("Sistema inicializado con base de datos");
     app.listen(PORT, () => {

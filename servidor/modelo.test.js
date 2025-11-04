@@ -4,7 +4,7 @@ describe('El sistema', function () {
   let sistema;
 
   beforeEach(function () {
-    sistema = new modelo.Sistema([test, true]);
+    sistema = new modelo.Sistema({ test: true });
   });
 
   it('agregar usuario', function () {
