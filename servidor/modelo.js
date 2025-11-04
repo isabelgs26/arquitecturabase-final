@@ -1,61 +1,33 @@
 const datos = require("./cad.js");
+const bcrypt = require("bcrypt");
 
-function Sistema() {
+function Sistema(test) {
     this.cad = new datos.CAD();
+    if (!test.test) {
+        this.cad.conectar(function (db) {
+            console.log("Conectado a Mongo Atlas");
+        });
+    }
     this.usuarios = {};
 
     this.inicializar = async function () {
-        console.log("Inicializando sistema y conexión a BD...");
-        await this.cad.conectar(function (db) {
-            console.log("Conectado a Mongo Atlas - Base de datos lista");
-        });
+        console.log("Inicializando sistema y conexión a BD (modelo.js)...");
+        await this.cad.conectar();
     }
+
+
     this.usuarioGoogle = function (usr, callback) {
         this.cad.buscarOCrearUsuario(usr, function (obj) {
             callback(obj);
         });
     }
-    this.agregarUsuario = function (nick) {
-        let res = { "nick": -1 };
-        if (!this.usuarios[nick]) {
-            this.usuarios[nick] = new Usuario(nick);
-            res.nick = nick;
-        } else {
-            console.log("el nick " + nick + " está en uso");
-        }
-        return res;
+
+
+    this.obtenerUsuarios = function (callback) {
+        this.cad.buscarUsuarios({}, callback);
     }
 
-    this.obtenerUsuarios = function () {
-        return this.usuarios;
-    }
 
-    this.usuarioActivo = function (nick) {
-        let res = { "activo": false };
-        if (this.usuarios[nick]) {
-            res.activo = true;
-        }
-        return res;
-    }
-
-    this.eliminarUsuario = function (nick) {
-        let res = { "eliminado": false };
-        if (this.usuarios[nick]) {
-            delete this.usuarios[nick];
-            res.eliminado = true;
-        }
-        return res;
-    }
-
-    this.numeroUsuarios = function () {
-        const usuariosValidos = Object.values(this.usuarios).filter(u => u && u.nick);
-        const num = usuariosValidos.length;
-        return { "num": num };
-    }
-
-    const bcrypt = require("bcrypt");
-
-    // 📄 Código Corregido para registrarUsuario
     this.registrarUsuario = function (obj, callback) {
         let modelo = this;
         if (!obj.nick) {
@@ -69,7 +41,6 @@ function Sistema() {
                         console.error("Error al cifrar la contraseña:", err);
                         return callback({ "email": -1 });
                     }
-
                     obj.password = hash;
                     modelo.cad.insertarUsuario(obj, function (res) {
                         callback(res);
@@ -87,7 +58,6 @@ function Sistema() {
                 callback({ "email": -1 });
                 return;
             }
-            // 🔐 Comprobar contraseña cifrada
             bcrypt.compare(obj.password, usr.password, function (err, ok) {
                 if (ok) {
                     callback(usr);
@@ -98,6 +68,37 @@ function Sistema() {
         });
     };
 
+
+    this.agregarUsuario = function (nick) {
+        let res = { "nick": -1 };
+        if (!this.usuarios[nick]) {
+            this.usuarios[nick] = new Usuario(nick);
+            res.nick = nick;
+        } else {
+            console.log("el nick " + nick + " está en uso");
+        }
+        return res;
+    }
+    this.usuarioActivo = function (nick) {
+        let res = { "activo": false };
+        if (this.usuarios[nick]) {
+            res.activo = true;
+        }
+        return res;
+    }
+    this.eliminarUsuario = function (nick) {
+        let res = { "eliminado": false };
+        if (this.usuarios[nick]) {
+            delete this.usuarios[nick];
+            res.eliminado = true;
+        }
+        return res;
+    }
+    this.numeroUsuarios = function () {
+        const usuariosValidos = Object.values(this.usuarios).filter(u => u && u.nick);
+        const num = usuariosValidos.length;
+        return { "num": num };
+    }
     function Usuario(nick) {
         this.nick = nick;
     }

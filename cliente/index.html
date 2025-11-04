@@ -41,11 +41,13 @@
         <h3>Sistema</h3>
         <div id="au"></div>
         <div id="msg"></div>
+
+
     </div>
 
     <!-- Google One Tap Configuration -->
     <div id="g_id_onload" data-client_id="GOOGLE_CLIENT_ID_PLACEHOLDER"
-        data-login_uri="https://localhost:3000/oneTap/callback" data-auto_prompt="true" data-context="signin"
+        data-login_uri="http://localhost:3000/oneTap/callback" data-auto_prompt="true" data-context="signin"
         data-skip_prompt_cookie="nick">
     </div>
 
@@ -54,18 +56,12 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
 
-    <!-- Tus scripts de aplicación: ORDEN CORREGIDO -->
     <script src="./controlWeb.js"></script>
     <script src="./clienteRest.js"></script>
 
     <script>
-        // PASO 1: Crear ControlWeb (cw)
         var cw = new ControlWeb();
-
-        // PASO 2: Crear ClienteRest (rest) y PASARLE cw
-        var rest = new ClienteRest(cw);
-
-        // Iniciar la aplicación
+        var rest = new ClienteRest(cw); // Se pasa 'cw' como argumento
         cw.comprobarSesion();
     </script>
 </body>

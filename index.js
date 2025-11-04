@@ -6,7 +6,7 @@ const modelo = require("./servidor/modelo.js");
 const fs = require("fs");
 const bodyParser = require("body-parser");
 
-const sistema = new modelo.Sistema();
+const sistema = new modelo.Sistema([test: false]);
 const app = express();
 require('dotenv').config();
 
@@ -14,20 +14,13 @@ require("./servidor/passport-setup.js");
 
 const PORT = process.env.PORT || 3000;
 
-sistema.inicializar().then(() => {
-    console.log("Sistema inicializado con base de datos");
-}).catch(err => {
-    console.error("Error inicializando sistema:", err);
-});
-
 // MIDDLEWARES BÁSICOS
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// RUTA RAÍZ (index.html) CON PROCESAMIENTO
-// Esta ruta es necesaria para reemplazar el ID de Google
+// RUTA RAÍZ (index.html)
 app.get("/", function (request, response) {
     let contenido = fs.readFileSync(__dirname + "/cliente/index.html", "utf8");
     contenido = contenido.replace("GOOGLE_CLIENT_ID_PLACEHOLDER", process.env.GOOGLE_CLIENT_ID);
@@ -36,7 +29,6 @@ app.get("/", function (request, response) {
 });
 
 // MIDDLEWARE DE ESTÁTICOS
-// Esta línea sirve TODOS los demás archivos en /cliente (como registro.html, css, js)
 app.use(express.static(__dirname + "/cliente"));
 
 // CONFIGURACIÓN DE SESIÓN Y PASSPORT
@@ -59,13 +51,10 @@ app.get("/sesion", function (req, res) {
 app.get("/cerrarSession", function (req, res) {
     if (req.user && req.user.emails && req.user.emails[0]) {
         let email = req.user.emails[0].value;
-        sistema.eliminarUsuario(email);
+        sistema.eliminarUsuario(email); // Esto es de la memoria local, está bien para 'salir'
     }
-
     req.logout(function (err) {
-        if (err) {
-            return res.status(500).json({ error: "Error al cerrar sesión" });
-        }
+        if (err) { return res.status(500).json({ error: "Error al cerrar sesión" }); }
         req.session = null;
         res.clearCookie('Sistema');
         res.clearCookie('connect.sid');
@@ -73,9 +62,10 @@ app.get("/cerrarSession", function (req, res) {
     });
 });
 
-// SE HA ELIMINADO LA RUTA DUPLICADA app.get("/") QUE ESTABA AQUÍ
 
-// GOOGLE OAUTH TRADICIONAL
+// ========================
+// GOOGLE OAUTH TRADICIONAL 
+// ========================
 app.get("/auth/google", passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get("/google/callback",
@@ -84,25 +74,35 @@ app.get("/google/callback",
         if (req.user && req.user.emails && req.user.emails[0]) {
             let email = req.user.emails[0].value;
             let userName = req.user.displayName || email;
-            sistema.agregarUsuario(email);
-            res.cookie('nick', userName);
+
+            // Pasar 'nombre' para que se guarde en la BD
+            sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
+                console.log("Usuario de Google (callback) PROCESADO EN BD:", obj.email);
+                res.cookie('nick', userName);
+                res.redirect('/');
+            });
+        } else {
+            res.redirect('/');
         }
-        res.redirect('/');
     }
 );
 
-// GOOGLE ONE TAP
+// ========================
+// GOOGLE ONE TAP 
+// ========================
 app.post('/oneTap/callback',
-    passport.authenticate('google-one-tap', {
-        session: false
-    }),
+    passport.authenticate('google-one-tap', { session: false }),
     function (req, res) {
         if (req.user && req.user.emails && req.user.emails[0]) {
             let email = req.user.emails[0].value;
             let userName = req.user.displayName || email;
-            sistema.agregarUsuario(email);
-            res.cookie('nick', userName);
-            res.redirect('/');
+
+            // Pasar 'nombre' para que se guarde en la BD
+            sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
+                console.log("Usuario de Google (One Tap) PROCESADO EN BD:", obj.email);
+                res.cookie('nick', userName);
+                res.redirect('/');
+            });
         } else {
             res.redirect('/');
         }
@@ -114,11 +114,11 @@ app.get("/fallo", function (request, response) {
 });
 
 app.get("/good", function (request, response) {
-    if (request.user && request.user.emails && request.user.emails[0]) {
-        let email = request.user.emails[0].value;
-        let userName = request.user.displayName || email;
+    if (request.user && req.user.emails && req.user.emails[0]) {
+        let email = req.user.emails[0].value;
+        let userName = req.user.displayName || email;
 
-        sistema.usuarioGoogle({ "email": email }, function (obj) {
+        sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
             response.cookie('nick', userName);
             response.redirect('/');
         });
@@ -127,44 +127,20 @@ app.get("/good", function (request, response) {
     }
 });
 
-// RUTAS DE USUARIOS (GESTIÓN ANTIGUA - A REVISAR SI AÚN SE USA)
-app.get("/agregarUsuario/:nick/:email/:password", function (request, response) {
-    let nick = request.params.nick;
-    let email = request.params.email;
-    let password = request.params.password;
-    let res = sistema.agregarUsuario(nick, email, password);
-    response.send(res);
-});
 
-app.get("/agregarUsuario/:nick", function (req, res) {
-    let nick = req.params.nick;
-    let resultado = sistema.agregarUsuario(nick);
-    res.json(resultado);
-});
-
+// ========================
+// "VER USUARIOS" 
+// ========================
 app.get("/obtenerUsuarios", function (req, res) {
-    let usuarios = sistema.obtenerUsuarios();
-    res.json(usuarios);
+    sistema.obtenerUsuarios(function (usuarios) {
+        res.json(usuarios); // Devuelve los usuarios de la BD
+    });
 });
 
-app.get("/usuarioActivo/:nick", function (req, res) {
-    let nick = req.params.nick;
-    let resultado = sistema.usuarioActivo(nick);
-    res.json(resultado);
-});
 
-app.get("/numeroUsuarios", function (req, res) {
-    let resultado = sistema.numeroUsuarios();
-    res.json(resultado);
-});
-
-app.get("/eliminarUsuario/:nick", function (req, res) {
-    let nick = req.params.nick;
-    let resultado = sistema.eliminarUsuario(nick);
-    res.json(resultado);
-});
-
-// RUTAS DE REGISTRO Y LOGIN LOCAL
+// ========================
+// RUTAS DE REGISTRO Y LOGIN LOCAL 
+// ========================
 app.post("/registrarUsuario", function (req, res) {
     let obj = req.body;
     sistema.registrarUsuario(obj, function (resultado) {
@@ -186,7 +162,14 @@ app.post("/loginUsuario", function (req, res) {
     });
 });
 
-// INICIO DEL SERVIDOR
-app.listen(PORT, () => {
-    console.log(`Servidor escuchando en el puerto ${PORT}`);
+
+
+// INICIO DEL SERVIDOR (Correcto)
+sistema.inicializar().then(() => {
+    console.log("Sistema inicializado con base de datos");
+    app.listen(PORT, () => {
+        console.log(`Servidor escuchando en el puerto ${PORT}`);
+    });
+}).catch(err => {
+    console.error("Error inicializando sistema:", err);
 });

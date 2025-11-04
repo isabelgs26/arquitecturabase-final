@@ -41,7 +41,6 @@ Sistema.prototype.obtenerUsuarios = function () {
     return this.usuarios;
 }
 
-// ✅ MÉTODO LOGIN SIMPLE (sin bcrypt, sin confirmación)
 Sistema.prototype.loginUsuario = function (obj, callback) {
     this.cad.buscarUsuario({ email: obj.email }, function (usr) {
         if (usr && usr.password === obj.password) {
@@ -52,7 +51,6 @@ Sistema.prototype.loginUsuario = function (obj, callback) {
     });
 }
 
-// ✅ REGISTRO SIMPLE (sin bcrypt, sin email)
 Sistema.prototype.registrarUsuario = function (obj, callback) {
     let modelo = this;
     if (!obj.nick) {
@@ -69,7 +67,6 @@ Sistema.prototype.registrarUsuario = function (obj, callback) {
     });
 }
 
-// ✅ MÉTODO PARA GOOGLE (mantenido si lo usas)
 Sistema.prototype.usuarioGoogle = function (usr, callback) {
     this.cad.buscarOCrearUsuario(usr, function (obj) {
         callback(obj);
