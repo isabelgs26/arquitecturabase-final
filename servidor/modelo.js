@@ -1,106 +1,109 @@
 const datos = require("./cad.js");
 const bcrypt = require("bcrypt");
 
-function Sistema(test) {
+function Sistema(objConfig = {}) {
     this.cad = new datos.CAD();
-    if (!test.test) {
-        this.cad.conectar(function (db) {
-            console.log("Conectado a Mongo Atlas");
-        });
-    }
     this.usuarios = {};
 
-    this.inicializar = async function () {
-        console.log("Inicializando sistema y conexión a BD (modelo.js)...");
+    this.test = objConfig.test || false;
+}
+
+Sistema.prototype.inicializar = async function () {
+    console.log("Inicializando sistema y conexión a BD (modelo.js)...");
+
+    if (!this.test) {
+        console.log("Modo Producción: Conectando a MongoDB...");
         await this.cad.conectar();
+        console.log("Conexión a BD (modelo.js) completada.");
+    } else {
+        console.log("Modo Test: Omitiendo conexión a MongoDB.");
+    }
+}
+
+
+Sistema.prototype.usuarioGoogle = function (usr, callback) {
+    this.cad.buscarOCrearUsuario(usr, function (obj) {
+        callback(obj);
+    });
+}
+
+Sistema.prototype.obtenerUsuarios = function (callback) {
+    this.cad.buscarUsuarios({}, callback);
+}
+
+Sistema.prototype.registrarUsuario = function (obj, callback) {
+    let modelo = this;
+    if (!obj.nick) {
+        obj.nick = obj.email;
     }
 
-
-    this.usuarioGoogle = function (usr, callback) {
-        this.cad.buscarOCrearUsuario(usr, function (obj) {
-            callback(obj);
-        });
-    }
-
-
-    this.obtenerUsuarios = function (callback) {
-        this.cad.buscarUsuarios({}, callback);
-    }
-
-
-    this.registrarUsuario = function (obj, callback) {
-        let modelo = this;
-        if (!obj.nick) {
-            obj.nick = obj.email;
-        }
-
-        this.cad.buscarUsuario({ email: obj.email }, function (usr) {
-            if (!usr) {
-                bcrypt.hash(obj.password, 10, function (err, hash) {
-                    if (err) {
-                        console.error("Error al cifrar la contraseña:", err);
-                        return callback({ "email": -1 });
-                    }
-                    obj.password = hash;
-                    modelo.cad.insertarUsuario(obj, function (res) {
-                        callback(res);
-                    });
+    this.cad.buscarUsuario({ email: obj.email }, function (usr) {
+        if (!usr) {
+            bcrypt.hash(obj.password, 10, function (err, hash) {
+                if (err) {
+                    console.error("Error al cifrar la contraseña:", err);
+                    return callback({ "email": -1 });
+                }
+                obj.password = hash;
+                modelo.cad.insertarUsuario(obj, function (res) {
+                    callback(res);
                 });
+            });
+        } else {
+            callback({ "email": -1 });
+        }
+    });
+};
+
+Sistema.prototype.loginUsuario = function (obj, callback) {
+    this.cad.buscarUsuario({ email: obj.email }, function (usr) {
+        if (!usr) {
+            callback({ "email": -1 });
+            return;
+        }
+        bcrypt.compare(obj.password, usr.password, function (err, ok) {
+            if (ok) {
+                callback(usr);
             } else {
                 callback({ "email": -1 });
             }
         });
-    };
-
-    this.loginUsuario = function (obj, callback) {
-        this.cad.buscarUsuario({ email: obj.email }, function (usr) {
-            if (!usr) {
-                callback({ "email": -1 });
-                return;
-            }
-            bcrypt.compare(obj.password, usr.password, function (err, ok) {
-                if (ok) {
-                    callback(usr);
-                } else {
-                    callback({ "email": -1 });
-                }
-            });
-        });
-    };
+    });
+};
 
 
-    this.agregarUsuario = function (nick) {
-        let res = { "nick": -1 };
-        if (!this.usuarios[nick]) {
-            this.usuarios[nick] = new Usuario(nick);
-            res.nick = nick;
-        } else {
-            console.log("el nick " + nick + " está en uso");
-        }
-        return res;
+Sistema.prototype.agregarUsuario = function (nick) {
+    let res = { "nick": -1 };
+    if (!this.usuarios[nick]) {
+        this.usuarios[nick] = new Usuario(nick);
+        res.nick = nick;
+    } else {
+        console.log("el nick " + nick + " está en uso");
     }
-    this.usuarioActivo = function (nick) {
-        let res = { "activo": false };
-        if (this.usuarios[nick]) {
-            res.activo = true;
-        }
-        return res;
-    }
-    this.eliminarUsuario = function (nick) {
-        let res = { "eliminado": false };
-        if (this.usuarios[nick]) {
-            delete this.usuarios[nick];
-            res.eliminado = true;
-        }
-        return res;
-    }
-    this.numeroUsuarios = function () {
-        const usuariosValidos = Object.values(this.usuarios).filter(u => u && u.nick);
-        const num = usuariosValidos.length;
-        return { "num": num };
-    }
-    function Usuario(nick) {
-        this.nick = nick;
-    }
+    return res;
 }
+Sistema.prototype.usuarioActivo = function (nick) {
+    let res = { "activo": false };
+    if (this.usuarios[nick]) {
+        res.activo = true;
+    }
+    return res;
+}
+Sistema.prototype.eliminarUsuario = function (nick) {
+    let res = { "eliminado": false };
+    if (this.usuarios[nick]) {
+        delete this.usuarios[nick];
+        res.eliminado = true;
+    }
+    return res;
+}
+Sistema.prototype.numeroUsuarios = function () {
+    const usuariosValidos = Object.values(this.usuarios).filter(u => u && u.nick);
+    const num = usuariosValidos.length;
+    return { "num": num };
+}
+function Usuario(nick) {
+    this.nick = nick;
+}
+
 module.exports.Sistema = Sistema;

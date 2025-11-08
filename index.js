@@ -1,5 +1,4 @@
 require('dotenv').config();
-
 const express = require("express");
 const path = require("path");
 const passport = require("passport");
@@ -15,13 +14,11 @@ require("./servidor/passport-setup.js");
 
 const PORT = process.env.PORT || 3000;
 
-// MIDDLEWARES BÁSICOS
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// RUTA RAÍZ (index.html)
 app.get("/", function (request, response) {
     let contenido = fs.readFileSync(__dirname + "/cliente/index.html", "utf8");
     contenido = contenido.replace("GOOGLE_CLIENT_ID_PLACEHOLDER", process.env.GOOGLE_CLIENT_ID);
@@ -29,10 +26,8 @@ app.get("/", function (request, response) {
     response.send(contenido);
 });
 
-// MIDDLEWARE DE ESTÁTICOS
 app.use(express.static(__dirname + "/cliente"));
 
-// CONFIGURACIÓN DE SESIÓN Y PASSPORT
 app.use(cookieSession({
     name: 'Sistema',
     keys: ['key1', 'key2']
@@ -41,7 +36,6 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 
-// RUTAS DE AUTENTICACIÓN
 app.get("/sesion", function (req, res) {
     res.json({
         autenticado: req.isAuthenticated(),
@@ -51,7 +45,7 @@ app.get("/sesion", function (req, res) {
 
 app.get("/cerrarSession", function (req, res) {
     if (req.user && req.user.email) {
-        sistema.eliminarUsuario(req.user.email); // Esto es de la memoria local
+        sistema.eliminarUsuario(req.user.email);
     }
     req.logout(function (err) {
         if (err) { return res.status(500).json({ error: "Error al cerrar sesión" }); }
@@ -62,49 +56,21 @@ app.get("/cerrarSession", function (req, res) {
     });
 });
 
-
-// ========================
-// GOOGLE OAUTH TRADICIONAL 
-// ========================
 app.get("/auth/google", passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get("/google/callback",
-    passport.authenticate('google', { failureRedirect: '/' }),
-    function (req, res) {
-        if (req.user && req.user.email) {
-            let email = req.user.email;
-            let userName = req.user.nombre || email;
-
-            sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
-                console.log("Usuario de Google (callback) PROCESADO EN BD:", obj.email);
-                res.cookie('nick', userName);
-                res.redirect('/');
-            });
-        } else {
-            res.redirect('/');
-        }
-    }
+    passport.authenticate('google', {
+        successRedirect: '/good',
+        failureRedirect: '/'
+    })
 );
 
-// ========================
-// GOOGLE ONE TAP 
-// ========================
 app.post('/oneTap/callback',
-    passport.authenticate('google-one-tap', { session: false }),
-    function (req, res) {
-        if (req.user && req.user.emails && req.user.emails[0]) {
-            let email = req.user.emails[0].value;
-            let userName = req.user.displayName || email;
-
-            sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
-                console.log("Usuario de Google (One Tap) PROCESADO EN BD:", obj.email);
-                res.cookie('nick', userName);
-                res.redirect('/');
-            });
-        } else {
-            res.redirect('/');
-        }
-    }
+    passport.authenticate('google-one-tap', {
+        successRedirect: '/good',
+        failureRedirect: '/',
+        session: false
+    })
 );
 
 app.get("/fallo", function (request, response) {
@@ -112,23 +78,22 @@ app.get("/fallo", function (request, response) {
 });
 
 app.get("/good", function (request, response) {
-    if (req.user && req.user.email) {
-        let email = req.user.email;
-        let userName = req.user.nombre || email;
+    if (request.user && request.user.email) {
+        let email = request.user.email;
+        let userName = request.user.nombre || email;
 
         sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
+            console.log("Usuario de Google (ruta /good) PROCESADO EN BD:", obj.email);
             response.cookie('nick', userName);
             response.redirect('/');
         });
     } else {
-        res.redirect('/');
+        console.error("Error en /good: req.user no está definido o no tiene email.");
+        response.redirect('/');
     }
 });
 
 
-// ========================
-// "VER USUARIOS" 
-// ========================
 app.get("/obtenerUsuarios", function (req, res) {
     sistema.obtenerUsuarios(function (usuarios) {
         res.json(usuarios); // Devuelve los usuarios de la BD
@@ -136,9 +101,6 @@ app.get("/obtenerUsuarios", function (req, res) {
 });
 
 
-// ========================
-// RUTAS DE REGISTRO Y LOGIN LOCAL 
-// ========================
 app.post("/registrarUsuario", function (req, res) {
     let obj = req.body;
     sistema.registrarUsuario(obj, function (resultado) {
@@ -159,6 +121,32 @@ app.post("/loginUsuario", function (req, res) {
         }
     });
 });
+
+
+app.get("/agregarUsuario/:nick", function (req, res) {
+    let nick = req.params.nick;
+    let resultado = sistema.agregarUsuario(nick);
+    res.json(resultado);
+});
+
+app.get("/usuarioActivo/:nick", function (req, res) {
+    let nick = req.params.nick;
+    let resultado = sistema.usuarioActivo(nick);
+    res.json(resultado);
+});
+
+app.get("/numeroUsuarios", function (req, res) {
+    let resultado = sistema.numeroUsuarios();
+    res.json(resultado);
+});
+
+app.get("/eliminarUsuario/:nick", function (req, res) {
+    let nick = req.params.nick;
+    let resultado = sistema.eliminarUsuario(nick);
+    res.json(resultado);
+});
+// ========================
+
 
 // INICIO DEL SERVIDOR 
 sistema.inicializar().then(() => {

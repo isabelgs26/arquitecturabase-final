@@ -1,15 +1,32 @@
 function ControlWeb() {
+    let cw = this; // Guardar 'this'
 
-    // === COMPROBAR SESIÓN ===
+    // -----------------------------------------------------------------
+    // 🟢 FUNCIÓN CORREGIDA (LÓGICA SPRINT 2)
+    // Comprueba la sesión contra el servidor, no contra la cookie
+    // -----------------------------------------------------------------
     this.comprobarSesion = function () {
-        let nick = $.cookie("nick");
-        if (nick) {
-            this.limpiar();
-            this.mostrarMensaje("Bienvenido de nuevo, " + nick);
-            this.mostrarBotonCerrarSesion();
-        } else {
-            this.mostrarAcceso();
-        }
+        $.ajax({
+            type: 'GET',
+            url: '/sesion', // Ruta de servidor que usa Passport
+            success: function (data) {
+                if (data.autenticado) {
+                    // SÍ está logueado
+                    cw.limpiar();
+                    // Usamos 'data.usuario.nombre' que viene de la sesión
+                    cw.mostrarMensaje("Bienvenido de nuevo, " + data.usuario.nombre, "exito");
+                    cw.mostrarBotonCerrarSesion();
+                } else {
+                    // NO está logueado
+                    cw.mostrarAcceso();
+                    cw.ocultarBotonCerrarSesion(); // Ocultar botones
+                }
+            },
+            error: function (xhr, textStatus, errorThrown) {
+                console.error("Error al comprobar sesion:", errorThrown);
+                cw.mostrarAcceso(); // Si hay error, mostrar login
+            }
+        });
     };
 
     this.mostrarRegistro = function () {
@@ -33,7 +50,7 @@ function ControlWeb() {
         });
     };
 
-    // === MOSTRAR/OCULTAR BOTÓN CERRAR SESIÓN ===
+    // === MOSTRAR/OCULTAR BOTÓN CERRAR SESIÓN === (Sin cambios)
     this.mostrarBotonCerrarSesion = function () {
         $(".nav-item").hide();
         $("#cerrarSesionItem").show();
@@ -48,7 +65,7 @@ function ControlWeb() {
         $("#navInicio").show();
     };
 
-    // === FORMULARIO UNIFICADO DE ACCESO ===
+    // === FORMULARIO UNIFICADO DE ACCESO === (Sin cambios)
     this.mostrarAcceso = function () {
         this.limpiar();
         this.ocultarBotonCerrarSesion();
@@ -107,53 +124,72 @@ function ControlWeb() {
         });
     };
 
-    // === HOME DESPUÉS DE LOGIN ===
+    // === HOME DESPUÉS DE LOGIN === (Sin cambios)
     this.mostrarHome = function () {
         this.limpiar();
         this.mostrarBotonCerrarSesion();
-        this.mostrarMensaje("Has iniciado sesión correctamente");
+        // 🟢 CORREGIDO: Llama a comprobarSesion para mostrar el mensaje de bienvenida
+        cw.comprobarSesion();
     };
 
-    // === SALIR ===
+    // -----------------------------------------------------------------
+    // 🟢 FUNCIÓN CORREGIDA (LÓGICA SPRINT 2)
+    // Llama al servidor para destruir la sesión, no borra la cookie
+    // -----------------------------------------------------------------
     this.salir = function () {
-        $.removeCookie("nick");
-        this.ocultarBotonCerrarSesion();
-        cw.mostrarMensaje("Sesión cerrada correctamente. ¡Hasta pronto!");
-
-        setTimeout(() => {
-            location.reload();
-        }, 1500);
+        $.ajax({
+            type: 'GET',
+            url: '/cerrarSession', // Llama a la ruta del servidor
+            success: function (data) {
+                if (data.success) {
+                    location.reload(); // Recarga la página
+                } else {
+                    cw.mostrarMensaje("Error al cerrar sesión", "error");
+                }
+            },
+            error: function (xhr, textStatus, errorThrown) {
+                console.error("Error al cerrar sesion:", errorThrown);
+                cw.mostrarMensaje("Error de red al cerrar sesión", "error");
+            }
+        });
     };
 
-    // === VER USUARIOS ===
+    // -----------------------------------------------------------------
+    // 🟢 "VER USUARIOS" (CORREGIDO PARA LEER ARRAY DE BD)
+    // -----------------------------------------------------------------
     this.mostrarObtenerUsuarios = function () {
         this.limpiar();
+        this.mostrarBotonCerrarSesion(); // Asegurarse de que los botones de nav están bien
         let html = `
         <div id="mOU" class="form-group">
-            <button id="btnOU" class="btn btn-info">Obtener Lista de Usuarios</button>
+            <button id="btnOU" class="btn btn-info">Obtener Lista de Usuarios (de MongoDB)</button>
             <div id="listaUsuarios" class="mt-3"></div>
         </div>`;
         $("#au").html(html);
 
         $("#btnOU").on("click", function () {
+            // Llama a la ruta del servidor (que ahora lee de la BD)
             $.getJSON("/obtenerUsuarios", function (data) {
                 let listaDiv = $("#listaUsuarios");
                 listaDiv.empty();
 
-                if (Object.keys(data).length === 0) {
-                    listaDiv.html('<div class="alert alert-warning">No hay usuarios registrados</div>');
+                // 🟢 CORREGIDO: 'data' ahora es un ARRAY, no un objeto
+                if (data.length === 0) {
+                    listaDiv.html('<div class="alert alert-warning">No hay usuarios registrados en la base de datos</div>');
                 } else {
                     let tabla = `
                     <div class="card mt-3">
-                        <div class="card-header"><h5>Usuarios Registrados</h5></div>
+                        <div class="card-header"><h5>Usuarios Registrados en MongoDB</h5></div>
                         <div class="card-body">
                             <table class="table table-striped">
-                                <thead><tr><th>Nick</th><th>Email</th></tr></thead>
+                                <thead><tr><th>Nombre</th><th>Email</th><th>ID</th></tr></thead>
                                 <tbody>`;
-                    for (let nick in data) {
-                        let u = data[nick];
-                        tabla += `<tr><td>${u.nick}</td><td>${u.email || 'No especificado'}</td></tr>`;
-                    }
+
+                    // 🟢 CORREGIDO: Iterar sobre el array 'data'
+                    data.forEach(function (u) {
+                        tabla += `<tr><td>${u.nombre || u.nick}</td><td>${u.email}</td><td>${u._id}</td></tr>`;
+                    });
+
                     tabla += `</tbody></table></div></div>`;
                     listaDiv.html(tabla);
                 }
@@ -161,12 +197,17 @@ function ControlWeb() {
         });
     };
 
-    // === ELIMINAR USUARIO ===
+    // -----------------------------------------------------------------
+    // 🟢 FUNCIONES ANTIGUAS (SPRINT 1) MANTENIDAS
+    // -----------------------------------------------------------------
+
+    // === ELIMINAR USUARIO (SPRINT 1) ===
     this.mostrarEliminarUsuario = function () {
         this.limpiar();
+        this.mostrarBotonCerrarSesion();
         let html = `
         <div id="mEU" class="form-group">
-            <label for="nickEliminar">Nick a eliminar:</label>
+            <label for="nickEliminar">Nick a eliminar (de la memoria):</label>
             <input type="text" class="form-control" id="nickEliminar">
             <button id="btnEU" class="btn btn-danger mt-2">Eliminar Usuario</button>
         </div>`;
@@ -175,31 +216,33 @@ function ControlWeb() {
         $("#btnEU").on("click", function () {
             let nick = $("#nickEliminar").val().trim();
             if (nick) rest.eliminarUsuario(nick);
-            else cw.mostrarMensaje("Por favor, introduce un nick válido");
+            else cw.mostrarMensaje("Por favor, introduce un nick válido", "error");
         });
     };
 
-    // === NÚMERO DE USUARIOS ===
+    // === NÚMERO DE USUARIOS (SPRINT 1) ===
     this.mostrarNumeroUsuarios = function () {
         this.limpiar();
+        this.mostrarBotonCerrarSesion();
         let html = `
         <div id="mNU" class="form-group">
-            <button id="btnNU" class="btn btn-warning">Consultar Número de Usuarios</button>
+            <button id="btnNU" class="btn btn-warning">Consultar Número de Usuarios (en memoria)</button>
             <div id="resultadoNumero" class="mt-3 alert alert-info" style="display:none;"></div>
         </div>`;
         $("#au").html(html);
 
         $("#btnNU").on("click", function () {
-            rest.numeroUsuarios();
+            rest.numeroUsuarios(); // Llama a la ruta antigua
         });
     };
 
-    // === CONSULTAR USUARIO ACTIVO ===
+    // === CONSULTAR USUARIO ACTIVO (SPRINT 1) ===
     this.mostrarUsuarioActivo = function () {
         this.limpiar();
+        this.mostrarBotonCerrarSesion();
         let html = `
         <div id="mUA" class="form-group">
-            <label for="nickConsultar">Consultar estado de usuario:</label>
+            <label for="nickConsultar">Consultar estado de usuario (en memoria):</label>
             <input type="text" class="form-control" id="nickConsultar" placeholder="Introduce el nick">
             <button id="btnUA" class="btn btn-secondary mt-2">Consultar Estado</button>
             <div id="resultadoEstado" class="mt-3"></div>
@@ -209,17 +252,18 @@ function ControlWeb() {
         $("#btnUA").on("click", function () {
             let nick = $("#nickConsultar").val().trim();
             if (nick) {
+                // Llama a la ruta antigua
                 $.getJSON("/usuarioActivo/" + nick, function (data) {
                     let resultado = data.activo
                         ? `<div class="alert alert-success">El usuario <strong>${nick}</strong> está ACTIVO</div>`
                         : `<div class="alert alert-danger">El usuario <strong>${nick}</strong> no existe</div>`;
                     $("#resultadoEstado").html(resultado);
                 });
-            } else cw.mostrarMensaje("Introduce un nick válido");
+            } else cw.mostrarMensaje("Introduce un nick válido", "error");
         });
     };
 
-    // === UTILIDADES ===
+    // === UTILIDADES === (Sin cambios)
     this.limpiar = function () {
         $("#au").empty();
     };
@@ -235,11 +279,11 @@ function ControlWeb() {
         $("#msg").remove();
 
         let html = `<div id="msg" class="alert ${claseAlerta} alert-dismissible fade show" role="alert">
-                        ${msg}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>`;
+                            ${msg}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>`;
 
         $("#au").prepend(html);
     };
