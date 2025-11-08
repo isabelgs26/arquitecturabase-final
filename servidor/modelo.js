@@ -4,13 +4,11 @@ const bcrypt = require("bcrypt");
 function Sistema(objConfig = {}) {
     this.cad = new datos.CAD();
     this.usuarios = {};
-
     this.test = objConfig.test || false;
 }
 
 Sistema.prototype.inicializar = async function () {
     console.log("Inicializando sistema y conexión a BD (modelo.js)...");
-
     if (!this.test) {
         console.log("Modo Producción: Conectando a MongoDB...");
         await this.cad.conectar();
@@ -20,11 +18,8 @@ Sistema.prototype.inicializar = async function () {
     }
 }
 
-
 Sistema.prototype.usuarioGoogle = function (usr, callback) {
-    this.cad.buscarOCrearUsuario(usr, function (obj) {
-        callback(obj);
-    });
+    this.cad.buscarOCrearUsuario(usr, callback);
 }
 
 Sistema.prototype.obtenerUsuarios = function (callback) {
@@ -45,9 +40,7 @@ Sistema.prototype.registrarUsuario = function (obj, callback) {
                     return callback({ "email": -1 });
                 }
                 obj.password = hash;
-                modelo.cad.insertarUsuario(obj, function (res) {
-                    callback(res);
-                });
+                modelo.cad.insertarUsuario(obj, callback);
             });
         } else {
             callback({ "email": -1 });
@@ -58,8 +51,7 @@ Sistema.prototype.registrarUsuario = function (obj, callback) {
 Sistema.prototype.loginUsuario = function (obj, callback) {
     this.cad.buscarUsuario({ email: obj.email }, function (usr) {
         if (!usr) {
-            callback({ "email": -1 });
-            return;
+            return callback({ "email": -1 });
         }
         bcrypt.compare(obj.password, usr.password, function (err, ok) {
             if (ok) {
@@ -71,7 +63,6 @@ Sistema.prototype.loginUsuario = function (obj, callback) {
     });
 };
 
-
 Sistema.prototype.agregarUsuario = function (nick) {
     let res = { "nick": -1 };
     if (!this.usuarios[nick]) {
@@ -82,26 +73,27 @@ Sistema.prototype.agregarUsuario = function (nick) {
     }
     return res;
 }
-Sistema.prototype.usuarioActivo = function (nick) {
-    let res = { "activo": false };
-    if (this.usuarios[nick]) {
-        res.activo = true;
-    }
-    return res;
+
+Sistema.prototype.usuarioActivo = function (email, callback) {
+    this.cad.buscarUsuario({ email: email }, function (usr) {
+        if (usr) {
+            callback({ activo: true });
+        } else {
+            callback({ activo: false });
+        }
+    });
 }
-Sistema.prototype.eliminarUsuario = function (nick) {
-    let res = { "eliminado": false };
-    if (this.usuarios[nick]) {
-        delete this.usuarios[nick];
-        res.eliminado = true;
-    }
-    return res;
+
+Sistema.prototype.eliminarUsuario = function (email, callback) {
+    this.cad.eliminarUsuario({ email: email }, function (res) {
+        callback(res);
+    });
 }
-Sistema.prototype.numeroUsuarios = function () {
-    const usuariosValidos = Object.values(this.usuarios).filter(u => u && u.nick);
-    const num = usuariosValidos.length;
-    return { "num": num };
+
+Sistema.prototype.numeroUsuarios = function (callback) {
+    this.cad.contarUsuarios({}, callback);
 }
+
 function Usuario(nick) {
     this.nick = nick;
 }

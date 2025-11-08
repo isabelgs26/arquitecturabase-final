@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const express = require("express");
 const path = require("path");
 const passport = require("passport");
@@ -43,17 +44,14 @@ app.get("/sesion", function (req, res) {
     });
 });
 
-app.get("/cerrarSession", function (req, res) {
-    if (req.user && req.user.email) {
-        sistema.eliminarUsuario(req.user.email);
-    }
-    req.logout(function (err) {
-        if (err) { return res.status(500).json({ error: "Error al cerrar sesión" }); }
-        req.session = null;
-        res.clearCookie('Sistema');
-        res.clearCookie('connect.sid');
-        res.json({ success: true, message: "Sesión cerrada correctamente" });
-    });
+app.get("/cerrarSession", function (req, res, next) {
+
+    req.session = null;
+
+    res.clearCookie('Sistema');
+    res.clearCookie('connect.sid');
+
+    res.redirect('/');
 });
 
 app.get("/auth/google", passport.authenticate('google', { scope: ['profile', 'email'] }));
@@ -96,7 +94,7 @@ app.get("/good", function (request, response) {
 
 app.get("/obtenerUsuarios", function (req, res) {
     sistema.obtenerUsuarios(function (usuarios) {
-        res.json(usuarios); // Devuelve los usuarios de la BD
+        res.json(usuarios);
     });
 });
 
@@ -129,26 +127,26 @@ app.get("/agregarUsuario/:nick", function (req, res) {
     res.json(resultado);
 });
 
-app.get("/usuarioActivo/:nick", function (req, res) {
-    let nick = req.params.nick;
-    let resultado = sistema.usuarioActivo(nick);
-    res.json(resultado);
+app.get("/usuarioActivo/:email", function (req, res) {
+    let email = req.params.email;
+    sistema.usuarioActivo(email, function (resultado) {
+        res.json(resultado);
+    });
 });
 
 app.get("/numeroUsuarios", function (req, res) {
-    let resultado = sistema.numeroUsuarios();
-    res.json(resultado);
+    sistema.numeroUsuarios(function (resultado) {
+        res.json(resultado);
+    });
 });
 
-app.get("/eliminarUsuario/:nick", function (req, res) {
-    let nick = req.params.nick;
-    let resultado = sistema.eliminarUsuario(nick);
-    res.json(resultado);
+app.get("/eliminarUsuario/:email", function (req, res) {
+    let email = req.params.email;
+    sistema.eliminarUsuario(email, function (resultado) {
+        res.json(resultado);
+    });
 });
-// ========================
 
-
-// INICIO DEL SERVIDOR 
 sistema.inicializar().then(() => {
     console.log("Sistema inicializado con base de datos");
     app.listen(PORT, () => {

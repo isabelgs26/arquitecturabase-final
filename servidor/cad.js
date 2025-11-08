@@ -4,7 +4,6 @@ function CAD() {
 
     this.usuarios = null;
 
-
     this.conectar = async function () {
         let cad = this;
         const mongoUrl = process.env.MONGODB_URI;
@@ -24,71 +23,100 @@ function CAD() {
     this.buscarOCrearUsuario = function (usr, callback) {
         buscarOCrear(this.usuarios, usr, callback);
     }
-    function buscarOCrear(coleccion, criterio, callback) {
-        coleccion.findOneAndUpdate(criterio, { $set: criterio }, {
-            upsert: true,
-            returnDocument: "after",
-            projection: { email: 1 }
-        }, function (err, doc) {
-            if (err) { throw err; }
-            else {
-                console.log("Elemento actualizado (o creado) por Google");
-                if (doc && doc.value) {
-                    console.log(doc.value.email);
-                    callback({ email: doc.value.email });
-                } else {
-                    console.log("Documento creado, devolviendo criterio.");
-                    callback({ email: criterio.email });
-                }
-            }
-        });
-    }
-
 
     this.buscarUsuario = function (criterio, callback) {
         buscar(this.usuarios, criterio, callback);
     }
+
+    this.buscarUsuarios = function (criterio, callback) {
+        buscarPlural(this.usuarios, criterio, callback);
+    }
+
     this.insertarUsuario = function (usuario, callback) {
         insertar(this.usuarios, usuario, callback);
     }
+
+    this.eliminarUsuario = function (criterio, callback) {
+        eliminarUno(this.usuarios, criterio, callback);
+    }
+
+    this.contarUsuarios = function (criterio, callback) {
+        contar(this.usuarios, criterio, callback);
+    }
+
+
+
+    function buscarOCrear(coleccion, criterio, callback) {
+        coleccion.findOneAndUpdate(criterio, { $set: criterio }, {
+            upsert: true,
+            returnDocument: "after",
+            projection: { email: 1, nombre: 1 }
+        }, function (err, doc) {
+            if (err) { return callback(err); }
+            if (doc && doc.value) {
+                callback(doc.value);
+            } else {
+                callback({ email: criterio.email, nombre: criterio.nombre });
+            }
+        });
+    }
+
     function buscar(coleccion, criterio, callback) {
+        if (!coleccion) { return callback(new Error("Colección no inicializada")); }
         coleccion.find(criterio).toArray(function (error, usuarios) {
             if (error) {
                 console.error("Error en 'buscar' (cad.js):", error);
                 return callback(undefined);
             }
-            if (usuarios.length == 0) {
-                callback(undefined);
-            } else {
-                callback(usuarios[0]);
-            }
-        });
-    }
-    function insertar(coleccion, elemento, callback) {
-        coleccion.insertOne(elemento, function (err, result) {
-            if (err) {
-                console.log("error al insertar (cad.js):", err);
-                callback(undefined);
-            } else {
-                console.log("Nuevo elemento creado (Registro Local)");
-                callback(elemento);
-            }
+            callback(usuarios[0]);
         });
     }
 
-
-    this.buscarUsuarios = function (criterio, callback) {
-        buscarPlural(this.usuarios, criterio, callback);
-    }
     function buscarPlural(coleccion, criterio, callback) {
+        if (!coleccion) { return callback(new Error("Colección no inicializada")); }
         coleccion.find(criterio).toArray(function (error, usuarios) {
             if (error) {
                 console.error("Error en 'buscarPlural' (cad.js):", error);
-                return callback([]); // Devolver array vacío en error
+                return callback([]);
             }
-            callback(usuarios); // Devolver todos los usuarios
+            callback(usuarios);
         });
     }
+
+    function insertar(coleccion, elemento, callback) {
+        if (!coleccion) { return callback(new Error("ColeScción no inicializada")); }
+        coleccion.insertOne(elemento, function (err, result) {
+            if (err) {
+                console.error("Error en 'insertar' (cad.js):", err);
+                return callback(null);
+            }
+            console.log("Nuevo elemento creado");
+            callback(elemento);
+        });
+    }
+
+    function eliminarUno(coleccion, criterio, callback) {
+        if (!coleccion) { return callback(new Error("Colección no inicializada")); }
+        coleccion.deleteOne(criterio, function (err, result) {
+            if (err) {
+                console.error("Error en 'eliminarUno' (cad.js):", err);
+                return callback({ eliminado: 0 });
+            }
+            callback({ eliminado: result.deletedCount });
+        });
+    }
+
+    function contar(coleccion, criterio, callback) {
+        if (!coleccion) { return callback(new Error("Colección no inicializada")); }
+        coleccion.countDocuments(criterio, function (err, count) {
+            if (err) {
+                console.error("Error en 'contar' (cad.js):", err);
+                return callback({ num: 0 });
+            }
+            callback({ num: count });
+        });
+    }
+
 }
 
 module.exports.CAD = CAD;

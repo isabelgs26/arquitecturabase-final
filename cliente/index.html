@@ -5,9 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cliente</title>
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
-    <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -32,7 +30,7 @@
                 <a class="nav-link" href="#" onclick="cw.mostrarEliminarUsuario()">Eliminar Usuario</a>
             </li>
             <li id="cerrarSesionItem" class="nav-item" style="display: none;">
-                <a class="nav-link" href="#" onclick="cw.salir();">Cerrar Sesión</a>
+                <a class="nav-link" href="/cerrarSession">Cerrar Sesión</a>
             </li>
         </ul>
     </nav>
@@ -41,11 +39,8 @@
         <h3>Sistema</h3>
         <div id="au"></div>
         <div id="msg"></div>
-
-
     </div>
 
-    <!-- Google One Tap Configuration -->
     <div id="g_id_onload" data-client_id="GOOGLE_CLIENT_ID_PLACEHOLDER"
         data-login_uri="http://localhost:3000/oneTap/callback" data-auto_prompt="true" data-context="signin"
         data-skip_prompt_cookie="nick">
@@ -58,12 +53,14 @@
 
     <script src="./controlWeb.js"></script>
     <script src="./clienteRest.js"></script>
-
     <script>
-        var cw = new ControlWeb();
-        var rest = new ClienteRest(cw); // Se pasa 'cw' como argumento
-        cw.comprobarSesion();
+        const rest = new ClienteRest();
+        const cw = new ControlWeb();
+        $(document).ready(function () {
+            cw.comprobarSesion();
+        });
     </script>
+
 </body>
 
 </html>

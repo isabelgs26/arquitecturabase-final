@@ -119,15 +119,13 @@ function ControlWeb() {
             type: 'GET',
             url: '/cerrarSession',
             success: function (data) {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    cw.mostrarMensaje("Error al cerrar sesión", "error");
-                }
+                // NO ESPERAMOS RESPUESTA, SÓLO RECARGAMOS
+                location.reload();
             },
             error: function (xhr, textStatus, errorThrown) {
-                console.error("Error al cerrar sesion:", errorThrown);
-                cw.mostrarMensaje("Error de red al cerrar sesión", "error");
+                // SI DA ERROR (COMO EL PROVISIONAL HEADERS), TAMBIÉN RECARGAMOS
+                console.error("Error al cerrar sesion, recargando de todos modos.");
+                location.reload();
             }
         });
     };
@@ -244,8 +242,8 @@ function ControlWeb() {
 
         let html = `<div id="msg" class="alert ${claseAlerta} alert-dismissible fade show" role="alert">
                             ${msg}
-                            <button type.button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">                                
+                            <span aria-hidden="true">&times;</span>
                             </button>
                         </div>`;
 
