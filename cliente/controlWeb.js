@@ -1,30 +1,19 @@
 function ControlWeb() {
     let cw = this;
 
-    /**
-     * Esta función se llama al cargar la página.
-     * Comprueba si existe la cookie 'nick'.
-     * Esta cookie la establece el servidor en /good (Google) y /ok (Login local).
-     */
     this.comprobarSesion = function () {
-        let nick = $.cookie("nick"); // [cite: 104-105]
+        let nick = $.cookie("nick");
 
         if (nick) {
-            // Si la cookie existe, mostramos el home
             cw.mostrarHome(nick);
         } else {
-            // Si no, mostramos el formulario de acceso
             cw.mostrarAcceso();
             cw.ocultarBotonCerrarSesion();
         }
     };
 
-    /**
-     * Muestra el formulario de registro (registro.html)
-     */
     this.mostrarRegistro = function () {
         $("#fmRegistro").remove();
-        // Limpiamos la zona principal
         this.limpiar();
         $("#au").load("./registro.html", function () {
             $("#btnRegistro").on("click", function (e) {
@@ -43,26 +32,20 @@ function ControlWeb() {
         });
     };
 
-    /**
-     * Funciones para mostrar/ocultar los botones de navegación de la barra superior
-     */
     this.mostrarBotonCerrarSesion = function () {
-        $(".nav-item").hide(); // Oculta todos
-        $("#cerrarSesionItem").show(); // Muestra "Cerrar Sesión"
-        $(".nav-item").not(':first').not('#cerrarSesionItem').show(); // Muestra todos menos el de "Acceder"
+        $(".nav-item").hide();
+        $("#cerrarSesionItem").show();
+        $(".nav-item").not(':first').not('#cerrarSesionItem').show();
         $("#navInicio").show();
     };
 
     this.ocultarBotonCerrarSesion = function () {
-        $(".nav-item").hide(); // Oculta todos
-        $(".nav-item").first().show(); // Muestra "Acceder al Sistema"
-        $("#cerrarSesionItem").hide(); // Oculta "Cerrar Sesión"
+        $(".nav-item").hide();
+        $(".nav-item").first().show();
+        $("#cerrarSesionItem").hide();
         $("#navInicio").show();
     };
 
-    /**
-     * Muestra el formulario de Acceso (Login)
-     */
     this.mostrarAcceso = function () {
         this.limpiar();
         this.ocultarBotonCerrarSesion();
@@ -89,7 +72,6 @@ function ControlWeb() {
             
             <div style="text-align:center">
                 <p>O inicia sesión con:</p>
-                <!-- Esta ruta /auth/google la maneja Passport en index.js -->
                 <a href="/auth/google">
                     <img src="/img/inicioGoogle.png" style="height:40px;">
                 </a>
@@ -105,7 +87,6 @@ function ControlWeb() {
             let password = $("#passwordAcceso").val().trim();
 
             if (email && password) {
-                // Llama a la función corregida en clienteRest.js
                 rest.loginUsuario(email, password);
             } else {
                 cw.mostrarMensaje("Por favor, completa todos los campos para iniciar sesión", "error");
@@ -118,9 +99,6 @@ function ControlWeb() {
         });
     };
 
-    /**
-     * Muestra la vista "Home" (de bienvenida)
-     */
     this.mostrarHome = function (nick) {
         this.limpiar();
         this.mostrarBotonCerrarSesion();
@@ -128,30 +106,15 @@ function ControlWeb() {
         cw.mostrarMensaje("Bienvenido de nuevo, " + nickUsuario, "exito");
     };
 
-    /**
-     * Llama al servidor para cerrar la sesión
-     * (El enlace en index.html debe llamar a cw.salir())
-     */
+    // Esta función la llama el index.html (NO USAR href="/cerrarSession")
     this.salir = function () {
-        // Llama a la ruta /cerrarSession de index.js, que usa request.logout() [cite: 884-886]
-        $.ajax({
-            type: 'GET',
-            url: '/cerrarSession',
-            success: function (data) {
-                // Forzamos la recarga de la página.
-                // comprobarSesion() se ejecutará y mostrará el login.
-                location.reload();
-            },
-            error: function (xhr, textStatus, errorThrown) {
-                console.error("Error al cerrar sesion, recargando de todos modos.");
-                location.reload();
-            }
-        });
+        // Esta implementación fallaba por el redirect, la quitamos.
+        // El enlace directo <a href="/cerrarSession"> es el correcto.
+
+        // (Dejamos la función vacía por si se usa en otro sitio, 
+        // pero el enlace del index.html ya funciona)
     };
 
-    /**
-     * Muestra la lista de usuarios de la BD
-     */
     this.mostrarObtenerUsuarios = function () {
         this.limpiar();
         this.mostrarBotonCerrarSesion();
@@ -189,10 +152,6 @@ function ControlWeb() {
         });
     };
 
-    /**
-     * --- FUNCIÓN CORREGIDA (Era Obsoleta) ---
-     * Ahora elimina por email y el texto es correcto.
-     */
     this.mostrarEliminarUsuario = function () {
         this.limpiar();
         this.mostrarBotonCerrarSesion();
@@ -211,10 +170,6 @@ function ControlWeb() {
         });
     };
 
-    /**
-     * --- FUNCIÓN CORREGIDA (Era Obsoleta) ---
-     * El texto ahora es correcto.
-     */
     this.mostrarNumeroUsuarios = function () {
         this.limpiar();
         this.mostrarBotonCerrarSesion();
@@ -230,10 +185,6 @@ function ControlWeb() {
         });
     };
 
-    /**
-     * --- FUNCIÓN CORREGIDA (Era Obsoleta) ---
-     * Ahora consulta por email y el texto es correcto.
-     */
     this.mostrarUsuarioActivo = function () {
         this.limpiar();
         this.mostrarBotonCerrarSesion();
@@ -249,7 +200,6 @@ function ControlWeb() {
         $("#btnUA").on("click", function () {
             let email = $("#emailConsultar").val().trim();
             if (email) {
-                // La ruta /usuarioActivo/ espera un email
                 $.getJSON("/usuarioActivo/" + email, function (data) {
                     let resultado = data.activo
                         ? `<div class="alert alert-success">El usuario <strong>${email}</strong> está ACTIVO</div>`
@@ -260,16 +210,10 @@ function ControlWeb() {
         });
     };
 
-    /**
-     * Limpia la zona principal de la UI
-     */
     this.limpiar = function () {
         $("#au").empty();
     };
 
-    /**
-     * Muestra un mensaje de alerta (info, exito, error)
-     */
     this.mostrarMensaje = function (msg, tipo = "info") {
         let claseAlerta = "alert-info";
         if (tipo === "exito") {
@@ -278,15 +222,17 @@ function ControlWeb() {
             claseAlerta = "alert-danger";
         }
 
-        $("#msg").remove();
+        $("#msg").remove(); // Borra el mensaje anterior si existe
 
         let html = `<div id="msg" class="alert ${claseAlerta} alert-dismissible fade show" role="alert">
                         ${msg}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">                                
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"> 
                         <span aria-hidden="true">&times;</span>
                         </button>
                     </div>`;
 
-        $("#au").prepend(html);
+        // --- ¡ESTA ES LA CORRECCIÓN! ---
+        // Lo añadimos al div #msg, que está fuera de #au y no se borra.
+        $(".container").prepend(html);
     };
 }

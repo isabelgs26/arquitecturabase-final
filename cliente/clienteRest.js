@@ -1,9 +1,7 @@
 function ClienteRest(controlWeb) {
     let cw = controlWeb;
 
-    // --- ELIMINADAS ---
-    // Las funciones "agregarUsuario" y "agregarUsuario2" se eliminan.
-    // Eran del Sprint 1 y llamaban a la ruta obsoleta /agregarUsuario/:nick
+    // (Se eliminan agregarUsuario y agregarUsuario2 del Sprint 1)
 
     this.obtenerUsuarios = function () {
         $.getJSON("/obtenerUsuarios", function (data) {
@@ -22,17 +20,15 @@ function ClienteRest(controlWeb) {
                 "apellidos": apellidos
             }),
             success: function (data) {
-                // Esta lógica estaba bien, /registrarUsuario no cambió
+                // Lógica de Tarea 2.5 (Éxito/Fallo)
                 if (data.nick != -1) {
                     console.log("Usuario " + data.nick + " ha sido registrado");
                     cw.limpiar();
-                    cw.mostrarMensaje("Bienvenido al sistema, " + data.nick + ". Revisa tu email para confirmar.", "exito");
-
-                    // ESTA LÍNEA TE DEVUELVE AL LOGIN
-                    cw.mostrarAcceso();
+                    cw.mostrarMensaje("Usuario registrado con éxito. Inicia sesión para acceder al sistema.", "exito");
+                    cw.mostrarAcceso(); // Requisito 1: Mostrar login
                 } else {
                     console.log("No se pudo registrar el usuario");
-                    cw.mostrarMensaje("Error: El usuario (email) ya existe", "error");
+                    cw.mostrarMensaje("Error: El usuario (email) ya existe", "error"); // Requisito 2: Mostrar error
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
@@ -44,28 +40,18 @@ function ClienteRest(controlWeb) {
         });
     }
 
-    // --- FUNCIÓN ACTUALIZADA (Tarea 2.6 y 2.8) ---
     this.loginUsuario = function (email, password) {
         $.ajax({
             type: 'POST',
             url: '/loginUsuario', // Esta ruta ahora usa Passport
             data: JSON.stringify({ "email": email, "password": password }),
             success: function (data) {
-                // --- LÓGICA CORREGIDA ---
-                // El login fallido (vía /fallo) ahora devuelve {nick: "nook"}
-                // El login exitoso (vía /ok) devuelve {nick: "email@..."}
-
-                // Comprobamos el fallo (nook) y el antiguo (-1) por si acaso
+                // Lógica de Tarea 2.8 (Passport)
                 if (data.nick !== "nook" && data.nick !== -1) {
                     console.log("Usuario " + data.nick + " ha iniciado sesión");
-
-                    // --- AÑADIDO CRÍTICO ---
-                    // Guardamos la cookie 'nick' que nos dio el servidor [cite: 104-105]
-                    // (La ruta /ok la crea en el servidor, aquí la guardamos en el cliente)
                     $.cookie("nick", data.nick);
-
                     cw.limpiar();
-                    cw.mostrarHome(data.nick); // Le pasamos el nick a mostrarHome
+                    cw.mostrarHome(data.nick);
                 }
                 else {
                     console.log("Usuario o clave incorrectos");
@@ -73,8 +59,6 @@ function ClienteRest(controlWeb) {
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
-                // El 'error' de AJAX ahora es un fallo real del servidor,
-                // no un fallo de autenticación (que se maneja en 'success')
                 console.log("Status: " + textStatus);
                 console.log("Error: " + errorThrown);
                 cw.mostrarMensaje("Error en el servidor al iniciar sesión.", "error");
@@ -85,15 +69,11 @@ function ClienteRest(controlWeb) {
 
     this.numeroUsuarios = function () {
         $.getJSON("/numeroUsuarios", function (data) {
-            console.log("Datos recibidos del servidor:", data);
             let numero = data && data.num !== undefined ? data.num : 0;
             if ($("#resultadoNumero").length) {
                 $("#resultadoNumero").html("Número total de usuarios (en BD): <strong>" + numero + "</strong>");
                 $("#resultadoNumero").show();
             }
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-            console.error("Error al obtener número de usuarios:", textStatus, errorThrown);
-            $("#resultadoNumero").html("Error al obtener número de usuarios");
         });
     }
 

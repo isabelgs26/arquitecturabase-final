@@ -8,10 +8,13 @@ const modelo = require("./servidor/modelo.js");
 const fs = require("fs");
 const bodyParser = require("body-parser");
 
+// --- TAREA 2.8: Importar LocalStrategy ---
+const LocalStrategy = require('passport-local').Strategy;
+
 const sistema = new modelo.Sistema({ test: false });
 const app = express();
 
-require("./servidor/passport-setup.js");
+require("./servidor/passport-setup.js"); // Carga Google/OneTap
 
 const PORT = process.env.PORT || 3000;
 
@@ -30,12 +33,27 @@ app.get("/", function (request, response) {
 app.use(express.static(__dirname + "/cliente"));
 
 app.use(cookieSession({
-    name: 'Sistema', // Este es el nombre de la cookie de sesión
+    name: 'Sistema',
     keys: ['key1', 'key2']
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 
+// --- TAREA 2.8: Definir LocalStrategy ---
+// (Se define aquí porque necesita acceso a la instancia 'sistema')
+passport.use(new LocalStrategy(
+    { usernameField: "email", passwordField: "password" },
+    function (email, password, done) {
+        // sistema.loginUsuario ya usa bcrypt.compare (Tarea 2.7)
+        sistema.loginUsuario({ "email": email, "password": password }, function (user) {
+            if (user.email === -1) {
+                return done(null, false, { message: 'Email o contraseña incorrectos.' });
+            } else {
+                return done(null, user); // El usuario se guardará en req.user
+            }
+        });
+    }
+));
 
 app.get("/sesion", function (req, res) {
     res.json({
@@ -44,25 +62,15 @@ app.get("/sesion", function (req, res) {
     });
 });
 
-// --- ESTA ES LA CORRECCIÓN DEFINITIVA ---
-// Esta versión no usa request.logout() (que se cuelga)
+// --- Cierre de Sesión CORREGIDO ---
 app.get("/cerrarSession", function (request, response, next) {
-
-    // 1. Destruye la sesión en el servidor (para cookie-session)
     request.session = null;
-
-    // 2. Borra la cookie de sesión principal
     response.clearCookie('Sistema');
-
-    // 3. (LA LÍNEA CLAVE) Borra la cookie 'nick' que usa el cliente
     response.clearCookie('nick');
-
-    // 4. Redirige a la raíz (esto ya no se colgará)
     response.redirect("/");
 });
-// ---------------------------------
 
-
+// Rutas de Google (Sin cambios, estaban bien)
 app.get("/auth/google", passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get("/google/callback",
@@ -79,42 +87,20 @@ app.post('/oneTap/callback',
     })
 );
 app.get("/fallo", function (request, response) {
+    // Esta ruta la usa Passport en caso de fallo de autenticación
     response.send({ "nick": "nook" });
 });
 
 app.get("/good", function (request, response) {
-
-    console.log("--- DEBUG: Entrando a /good ---");
-
     if (!request.user || !request.user.emails || !request.user.emails.length === 0) {
-        console.error("Error en /good: request.user no está completo. Redirigiendo a /.");
         return response.redirect('/');
     }
-
-    let email;
-    let userName;
-
-    try {
-        email = request.user.emails[0].value;
-        userName = request.user.displayName || email;
-
-        console.log(`DEBUG: Email obtenido: ${email}, Nombre obtenido: ${userName}`);
-
-    } catch (e) {
-        console.error("Error CRÍTICO al leer 'request.user':", e.message);
-        return response.redirect('/');
-    }
-
-    console.log("DEBUG: Llamando a sistema.usuarioGoogle...");
+    let email = request.user.emails[0].value;
+    let userName = request.user.displayName || email;
 
     sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
-
-        console.log("DEBUG: Callback de sistema.usuarioGoogle SÍ se ejecutó.");
-        console.log("DEBUG: Usuario procesado en BD:", obj.email);
-
         response.cookie('nick', userName);
         response.redirect('/');
-
     });
 });
 
@@ -124,33 +110,31 @@ app.get("/obtenerUsuarios", function (req, res) {
     });
 });
 
-
+// Tarea 2.5: Ruta de Registro (Sin cambios)
 app.post("/registrarUsuario", function (req, res) {
     let obj = req.body;
     sistema.registrarUsuario(obj, function (resultado) {
-        if (resultado && resultado.email !== -1) {
-            res.json({ nick: resultado.email });
-        } else {
-            res.json({ nick: -1 });
-        }
+        res.json({ nick: resultado.email }); // Devuelve email o -1
     });
 });
 
-app.post("/loginUsuario", function (req, res) {
-    sistema.loginUsuario(req.body, function (resultado) {
-        if (resultado && resultado.email !== -1) {
-            res.json({ nick: resultado.email });
-        } else {
-            res.json({ nick: -1 });
-        }
-    });
+// --- TAREA 2.8: Ruta Login Local Asegurada ---
+app.post('/loginUsuario',
+    passport.authenticate("local", {
+        failureRedirect: "/fallo", // Si falla, redirige a /fallo
+        successRedirect: "/ok"      // Si OK, redirige a /ok
+    })
+);
+
+// --- TAREA 2.8: Nueva ruta /ok ---
+app.get("/ok", function (request, response) {
+    let nick = request.user.nick || request.user.email;
+    response.cookie('nick', nick);
+    response.send({ nick: nick });
 });
 
-app.get("/agregarUsuario/:nick", function (req, res) {
-    let nick = req.params.nick;
-    let resultado = sistema.agregarUsuario(nick);
-    res.json(resultado);
-});
+// --- RUTA OBSOLETA ELIMINADA ---
+// app.get("/agregarUsuario/:nick", ...);
 
 app.get("/usuarioActivo/:email", function (req, res) {
     let email = req.params.email;
