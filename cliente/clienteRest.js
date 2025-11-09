@@ -1,37 +1,9 @@
 function ClienteRest(controlWeb) {
     let cw = controlWeb;
 
-    this.agregarUsuario = function (nick) {
-        $.getJSON("/agregarUsuario/" + nick, function (data) {
-            let msg = "El nick " + nick + " está ocupado";
-            if (data.nick != -1) {
-                console.log("Usuario " + nick + " ha sido registrado");
-                msg = "Bienvenido al sistema, " + nick;
-            } else {
-                console.log("El nick ya está ocupado");
-            }
-            cw.mostrarMensaje(msg);
-        });
-    }
-
-    this.agregarUsuario2 = function (nick) {
-        $.ajax({
-            type: 'GET',
-            url: '/agregarUsuario/' + nick,
-            success: function (data) {
-                if (data.nick != -1) {
-                    console.log("Usuario " + nick + " ha sido registrado");
-                } else {
-                    console.log("El nick ya está ocupado");
-                }
-            },
-            error: function (xhr, textStatus, errorThrown) {
-                console.log("Status: " + textStatus);
-                console.log("Error: " + errorThrown);
-            },
-            contentType: 'application/json'
-        });
-    }
+    // --- ELIMINADAS ---
+    // Las funciones "agregarUsuario" y "agregarUsuario2" se eliminan.
+    // Eran del Sprint 1 y llamaban a la ruta obsoleta /agregarUsuario/:nick
 
     this.obtenerUsuarios = function () {
         $.getJSON("/obtenerUsuarios", function (data) {
@@ -53,6 +25,8 @@ function ClienteRest(controlWeb) {
                 if (data.nick != -1) {
                     console.log("Usuario " + data.nick + " ha sido registrado");
                     cw.limpiar();
+                    // El PDF pide enviar email de confirmación [cite: 521-523, 765-768]
+                    // (Tu lógica de mostrar "Revisa tu email" es correcta)
                     cw.mostrarMensaje("Bienvenido al sistema, " + data.nick + ". Revisa tu email para confirmar.", "exito");
                     cw.mostrarAcceso();
                 } else {
@@ -75,8 +49,13 @@ function ClienteRest(controlWeb) {
             url: '/loginUsuario',
             data: JSON.stringify({ "email": email, "password": password }),
             success: function (data) {
-                if (data.nick != -1) {
+                // --- CORRECCIÓN ---
+                // El login fallido (vía /fallo) ahora devuelve {nick: "nook"}
+                // El login exitoso (vía /ok) devuelve {nick: "email@..."}
+                if (data.nick !== "nook" && data.nick !== -1) {
                     console.log("Usuario " + data.nick + " ha iniciado sesión");
+                    // Guardamos la cookie que nos dio el servidor
+                    $.cookie("nick", data.nick);
                     cw.limpiar();
                     cw.mostrarHome();
                 }

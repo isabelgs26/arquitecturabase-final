@@ -44,22 +44,50 @@ function CAD() {
         contar(this.usuarios, criterio, callback);
     }
 
-
+    // EN: servidor/cad.js
 
     function buscarOCrear(coleccion, criterio, callback) {
-        coleccion.findOneAndUpdate(criterio, { $set: criterio }, {
+        console.log("DEBUG (cad.js): Entrando en buscarOCrear. Criterio:", criterio);
+
+        // --- ¡ESTA ES LA CORRECCIÓN! ---
+        // 1. La CONSULTA (query) se basa SÓLO en el email, que es el identificador único.
+        const query = { email: criterio.email };
+
+        // 2. La ACTUALIZACIÓN ($set) usa el objeto completo (email Y nombre)
+        const update = { $set: criterio };
+
+        // 3. Las Opciones son las mismas (crear si no existe, devolver el doc nuevo)
+        const options = {
             upsert: true,
             returnDocument: "after",
             projection: { email: 1, nombre: 1 }
-        }, function (err, doc) {
-            if (err) { return callback(err); }
+        };
+        // ---------------------------------
+
+        // Usamos las nuevas variables en la llamada
+        coleccion.findOneAndUpdate(query, update, options, function (err, doc) {
+
+            // Este log ahora SÍ debería aparecer
+            console.log("DEBUG (cad.js): Callback de findOneAndUpdate EJECUTADO.");
+
+            if (err) {
+                console.error("DEBUG (cad.js): Error en findOneAndUpdate:", err);
+                return callback(err); // Devolvemos el error
+            }
+
+            // El PDF [cite: 397] y tu código usan doc.value, lo cual es correcto para la v4.4 del driver.
             if (doc && doc.value) {
+                console.log("DEBUG (cad.js): Usuario encontrado/creado:", doc.value);
                 callback(doc.value);
             } else {
-                callback({ email: criterio.email, nombre: criterio.nombre });
+                // Fallback por si 'doc.value' es null (no debería pasar con 'returnDocument: "after"')
+                console.log("DEBUG (cad.js): doc.value es null. Devolviendo criterio.");
+                callback(criterio);
             }
         });
     }
+
+
 
     function buscar(coleccion, criterio, callback) {
         if (!coleccion) { return callback(new Error("Colección no inicializada")); }

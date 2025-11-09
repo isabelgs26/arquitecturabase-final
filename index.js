@@ -6,7 +6,9 @@ const passport = require("passport");
 const cookieSession = require("cookie-session");
 const modelo = require("./servidor/modelo.js");
 const fs = require("fs");
-const bodyParser = require("body-parser");
+
+// bodyParser está obsoleto, express ya lo incluye.
+// const bodyParser = require("body-parser"); 
 
 const sistema = new modelo.Sistema({ test: false });
 const app = express();
@@ -15,8 +17,7 @@ require("./servidor/passport-setup.js");
 
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+// Usamos los middlewares modernos de Express para parsear JSON y URL-encoded
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -36,7 +37,6 @@ app.use(cookieSession({
 app.use(passport.initialize());
 app.use(passport.session());
 
-
 app.get("/sesion", function (req, res) {
     res.json({
         autenticado: req.isAuthenticated(),
@@ -44,16 +44,19 @@ app.get("/sesion", function (req, res) {
     });
 });
 
-app.get("/cerrarSession", function (req, res, next) {
-
-    req.session = null;
-
-    res.clearCookie('Sistema');
-    res.clearCookie('connect.sid');
-
-    res.redirect('/');
+// --- CAMBIO 1: Cierre de Sesión (Sección 2.9) ---
+// Se usa request.logout() como pide Passport [cite: 884-886]
+app.get("/cerrarSession", function (request, response, next) {
+    request.logout(function (err) { // logout() requiere un callback
+        if (err) {
+            return next(err);
+        }
+        response.clearCookie('nick'); // Limpiamos la cookie del cliente
+        response.redirect("/"); // Redirigimos a la raíz
+    });
 });
 
+// Rutas de Google (Sin cambios, estaban bien)
 app.get("/auth/google", passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get("/google/callback",
@@ -66,39 +69,40 @@ app.get("/google/callback",
 app.post('/oneTap/callback',
     passport.authenticate('google-one-tap', {
         successRedirect: '/good',
-        failureRedirect: '/',
-        session: false
+        failureRedirect: '/'
     })
 );
-
 app.get("/fallo", function (request, response) {
     response.send({ "nick": "nook" });
 });
 
+// Ruta /good (Sin cambios, la dejamos con los logs de depuración)
 app.get("/good", function (request, response) {
-    if (request.user && request.user.email) {
-        let email = request.user.email;
-        let userName = request.user.nombre || email;
-
-        sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
-            console.log("Usuario de Google (ruta /good) PROCESADO EN BD:", obj.email);
-            response.cookie('nick', userName);
-            response.redirect('/');
-        });
-    } else {
-        console.error("Error en /good: req.user no está definido o no tiene email.");
-        response.redirect('/');
+    console.log("--- DEBUG: Entrando a /good ---");
+    if (!request.user || !request.user.emails || request.user.emails.length === 0) {
+        console.error("Error en /good: request.user no está completo. Redirigiendo a /.");
+        return response.redirect('/');
     }
-});
-
-
-app.get("/obtenerUsuarios", function (req, res) {
-    sistema.obtenerUsuarios(function (usuarios) {
-        res.json(usuarios);
+    let email;
+    let userName;
+    try {
+        email = request.user.emails[0].value;
+        userName = request.user.displayName || email;
+        console.log(`DEBUG: Email obtenido: ${email}, Nombre obtenido: ${userName}`);
+    } catch (e) {
+        console.error("Error CRÍTICO al leer 'request.user':", e.message);
+        return response.redirect('/');
+    }
+    console.log("DEBUG: Llamando a sistema.usuarioGoogle...");
+    sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
+        console.log("DEBUG: Callback de sistema.usuarioGoogle SÍ se ejecutó.");
+        console.log("DEBUG: Usuario procesado en BD:", obj.email);
+        response.cookie('nick', userName);
+        response.redirect('/');
     });
 });
 
-
+// Ruta de Registro (Sin cambios, estaba bien)
 app.post("/registrarUsuario", function (req, res) {
     let obj = req.body;
     sistema.registrarUsuario(obj, function (resultado) {
@@ -110,21 +114,38 @@ app.post("/registrarUsuario", function (req, res) {
     });
 });
 
-app.post("/loginUsuario", function (req, res) {
-    sistema.loginUsuario(req.body, function (resultado) {
-        if (resultado && resultado.email !== -1) {
-            res.json({ nick: resultado.email });
-        } else {
-            res.json({ nick: -1 });
-        }
-    });
+// --- CAMBIO 2: Login Local (Sección 2.8) ---
+// Ahora usa passport.authenticate("local") como pide el PDF [cite: 826-830]
+app.post('/loginUsuario',
+    passport.authenticate("local", {
+        failureRedirect: "/fallo", // Reutilizamos la ruta de fallo
+        successRedirect: "/ok"      // Nueva ruta de éxito para login local
+    })
+);
+
+// Nueva ruta /ok para manejar el éxito del login local [cite: 828-830]
+app.get("/ok", function (request, response) {
+    // request.user existe gracias a Passport
+    response.cookie('nick', request.user.email); // Creamos la cookie 'nick'
+    response.send({ nick: request.user.email }); // Enviamos JSON al cliente
 });
 
 
+// --- CAMBIO 3: Ruta Obsoleta Eliminada ---
+// Se elimina /agregarUsuario/:nick porque era del Sprint 1 (manejo en memoria)
+/*
 app.get("/agregarUsuario/:nick", function (req, res) {
     let nick = req.params.nick;
     let resultado = sistema.agregarUsuario(nick);
     res.json(resultado);
+});
+*/
+
+// Rutas de API de la Base de Datos (Sin cambios, estaban bien)
+app.get("/obtenerUsuarios", function (req, res) {
+    sistema.obtenerUsuarios(function (usuarios) {
+        res.json(usuarios);
+    });
 });
 
 app.get("/usuarioActivo/:email", function (req, res) {
@@ -147,6 +168,7 @@ app.get("/eliminarUsuario/:email", function (req, res) {
     });
 });
 
+// Inicio del servidor (Sin cambios, estaba bien)
 sistema.inicializar().then(() => {
     console.log("Sistema inicializado con base de datos");
     app.listen(PORT, () => {

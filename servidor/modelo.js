@@ -1,10 +1,12 @@
+// EN: servidor/modelo.js
+
 const datos = require("./cad.js");
 const bcrypt = require("bcrypt");
 
 function Sistema(objConfig = {}) {
     this.cad = new datos.CAD();
-    this.usuarios = {};
     this.test = objConfig.test || false;
+    // Se elimina this.usuarios = {} (obsoleto del Sprint 1)
 }
 
 Sistema.prototype.inicializar = async function () {
@@ -18,6 +20,7 @@ Sistema.prototype.inicializar = async function () {
     }
 }
 
+// Correcto para Sprint 2 [cite: 408-411]
 Sistema.prototype.usuarioGoogle = function (usr, callback) {
     this.cad.buscarOCrearUsuario(usr, callback);
 }
@@ -26,6 +29,7 @@ Sistema.prototype.obtenerUsuarios = function (callback) {
     this.cad.buscarUsuarios({}, callback);
 }
 
+// Correcto para Sprint 2 [cite: 608-628]
 Sistema.prototype.registrarUsuario = function (obj, callback) {
     let modelo = this;
     if (!obj.nick) {
@@ -34,25 +38,29 @@ Sistema.prototype.registrarUsuario = function (obj, callback) {
 
     this.cad.buscarUsuario({ email: obj.email }, function (usr) {
         if (!usr) {
+            // Cifrar clave [cite: 844, 1041]
             bcrypt.hash(obj.password, 10, function (err, hash) {
                 if (err) {
                     console.error("Error al cifrar la contraseña:", err);
                     return callback({ "email": -1 });
                 }
                 obj.password = hash;
+                // Insertar usuario [cite: 615]
                 modelo.cad.insertarUsuario(obj, callback);
             });
         } else {
-            callback({ "email": -1 });
+            callback({ "email": -1 }); // Usuario ya existe [cite: 621]
         }
     });
 };
 
+// Correcto para Sprint 2 [cite: 818, 978-999]
 Sistema.prototype.loginUsuario = function (obj, callback) {
     this.cad.buscarUsuario({ email: obj.email }, function (usr) {
         if (!usr) {
             return callback({ "email": -1 });
         }
+        // Comparar clave cifrada [cite: 845, 990]
         bcrypt.compare(obj.password, usr.password, function (err, ok) {
             if (ok) {
                 callback(usr);
@@ -62,17 +70,6 @@ Sistema.prototype.loginUsuario = function (obj, callback) {
         });
     });
 };
-
-Sistema.prototype.agregarUsuario = function (nick) {
-    let res = { "nick": -1 };
-    if (!this.usuarios[nick]) {
-        this.usuarios[nick] = new Usuario(nick);
-        res.nick = nick;
-    } else {
-        console.log("el nick " + nick + " está en uso");
-    }
-    return res;
-}
 
 Sistema.prototype.usuarioActivo = function (email, callback) {
     this.cad.buscarUsuario({ email: email }, function (usr) {
@@ -94,8 +91,6 @@ Sistema.prototype.numeroUsuarios = function (callback) {
     this.cad.contarUsuarios({}, callback);
 }
 
-function Usuario(nick) {
-    this.nick = nick;
-}
+// Se eliminan Sistema.prototype.agregarUsuario y function Usuario(nick) (obsoletos del Sprint 1)
 
 module.exports.Sistema = Sistema;
