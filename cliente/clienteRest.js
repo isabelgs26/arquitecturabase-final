@@ -22,12 +22,13 @@ function ClienteRest(controlWeb) {
                 "apellidos": apellidos
             }),
             success: function (data) {
+                // Esta lógica estaba bien, /registrarUsuario no cambió
                 if (data.nick != -1) {
                     console.log("Usuario " + data.nick + " ha sido registrado");
                     cw.limpiar();
-                    // El PDF pide enviar email de confirmación [cite: 521-523, 765-768]
-                    // (Tu lógica de mostrar "Revisa tu email" es correcta)
                     cw.mostrarMensaje("Bienvenido al sistema, " + data.nick + ". Revisa tu email para confirmar.", "exito");
+
+                    // ESTA LÍNEA TE DEVUELVE AL LOGIN
                     cw.mostrarAcceso();
                 } else {
                     console.log("No se pudo registrar el usuario");
@@ -43,21 +44,28 @@ function ClienteRest(controlWeb) {
         });
     }
 
+    // --- FUNCIÓN ACTUALIZADA (Tarea 2.6 y 2.8) ---
     this.loginUsuario = function (email, password) {
         $.ajax({
             type: 'POST',
-            url: '/loginUsuario',
+            url: '/loginUsuario', // Esta ruta ahora usa Passport
             data: JSON.stringify({ "email": email, "password": password }),
             success: function (data) {
-                // --- CORRECCIÓN ---
+                // --- LÓGICA CORREGIDA ---
                 // El login fallido (vía /fallo) ahora devuelve {nick: "nook"}
                 // El login exitoso (vía /ok) devuelve {nick: "email@..."}
+
+                // Comprobamos el fallo (nook) y el antiguo (-1) por si acaso
                 if (data.nick !== "nook" && data.nick !== -1) {
                     console.log("Usuario " + data.nick + " ha iniciado sesión");
-                    // Guardamos la cookie que nos dio el servidor
+
+                    // --- AÑADIDO CRÍTICO ---
+                    // Guardamos la cookie 'nick' que nos dio el servidor [cite: 104-105]
+                    // (La ruta /ok la crea en el servidor, aquí la guardamos en el cliente)
                     $.cookie("nick", data.nick);
+
                     cw.limpiar();
-                    cw.mostrarHome();
+                    cw.mostrarHome(data.nick); // Le pasamos el nick a mostrarHome
                 }
                 else {
                     console.log("Usuario o clave incorrectos");
@@ -65,6 +73,8 @@ function ClienteRest(controlWeb) {
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
+                // El 'error' de AJAX ahora es un fallo real del servidor,
+                // no un fallo de autenticación (que se maneja en 'success')
                 console.log("Status: " + textStatus);
                 console.log("Error: " + errorThrown);
                 cw.mostrarMensaje("Error en el servidor al iniciar sesión.", "error");
