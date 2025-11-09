@@ -2,7 +2,6 @@ const passport = require("passport");
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const GoogleOneTapStrategy = require("passport-google-one-tap").GoogleOneTapStrategy;
 
-// Cargar .env (asegúrate de que esto esté aquí)
 require('dotenv').config({ override: true });
 
 passport.serializeUser(function (user, done) {
@@ -13,7 +12,6 @@ passport.deserializeUser(function (user, done) {
     done(null, user);
 });
 
-// Estrategia Google OAuth tradicional
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -22,7 +20,6 @@ passport.use(new GoogleStrategy({
     return done(null, profile);
 }));
 
-// Estrategia Google One Tap
 passport.use('google-one-tap', new GoogleOneTapStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,

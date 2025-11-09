@@ -1,34 +1,70 @@
 const modelo = require("./modelo.js");
 
-describe('El sistema', function () {
+const testUser = {
+  email: 'test@example.com',
+  password: 'password123',
+  nombre: 'TestName',
+  apellidos: 'TestSurname'
+};
+
+describe('Sistema asíncrono (MongoDB)', () => {
   let sistema;
 
-  beforeEach(function () {
+  beforeEach(async () => {
+
     sistema = new modelo.Sistema({ test: true });
   });
 
-  it('agregar usuario', function () {
-    let resultado = sistema.agregarUsuario('juan');
-    expect(resultado.nick).toEqual('juan');
-    expect(sistema.numeroUsuarios().num).toEqual(1);
+  it('Debe devolver el modo test y tener funciones asíncronas', () => {
+    expect(sistema.test).toBe(true);
+    expect(typeof sistema.registrarUsuario).toBe('function');
   });
 
-  it('eliminar usuario', function () {
-    sistema.agregarUsuario('juan');
-    let resultado = sistema.eliminarUsuario('juan');
-    expect(resultado.eliminado).toBe(true);
-    expect(sistema.numeroUsuarios().num).toEqual(0);
+
+  it('registrarUsuario (registro) debe fallar si se intenta registrar dos veces', (done) => {
+    let userExists = false;
+
+    sistema.cad.buscarUsuario = (criterio, callback) => {
+      if (userExists) {
+        callback(testUser);
+      } else {
+        callback(undefined);
+      }
+    };
+
+    sistema.cad.insertarUsuario = (obj, callback) => {
+      userExists = true;
+      callback({ email: obj.email });
+    };
+
+
+    sistema.registrarUsuario(testUser, (res1) => {
+      expect(res1.email).toEqual(testUser.email);
+
+      sistema.registrarUsuario(testUser, (res2) => {
+        expect(res2.email).toEqual(-1);
+        done();
+      });
+    });
   });
 
-  it('obtener usuario', function () {
-    sistema.agregarUsuario('juan');
-    const usuarios = sistema.obtenerUsuarios();
-    expect(usuarios['juan']).toBeDefined();
-  });
+  it('loginUsuario debe encontrar y comparar la contraseña correctamente', (done) => {
 
-  it('usuario activo', function () {
-    sistema.agregarUsuario('juan');
-    expect(sistema.usuarioActivo('juan').activo).toBe(true);
-    expect(sistema.usuarioActivo('pedro').activo).toBe(false);
+    const MOCKED_HASH = '$2b$10$tK4u651L18A4W6S7I8h456789l0jH0G6fB7F3D';
+    const MOCKED_USER = { ...testUser, confirmada: true, password: MOCKED_HASH };
+
+    sistema.cad.buscarUsuario = (criterio, callback) => {
+      expect(criterio.confirmada).toBe(true);
+      callback(MOCKED_USER);
+    };
+
+    sistema.loginUsuario({ email: testUser.email, password: testUser.password }, (res) => {
+
+
+      expect(res.email).toEqual(testUser.email);
+
+
+      done();
+    });
   });
 });

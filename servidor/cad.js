@@ -24,6 +24,11 @@ function CAD() {
         buscarOCrear(this.usuarios, usr, callback);
     }
 
+    this.actualizarUsuario = function (obj, callback) {
+        actualizar(this.usuarios, obj, callback);
+    }
+
+
     this.buscarUsuario = function (criterio, callback) {
         buscar(this.usuarios, criterio, callback);
     }
@@ -44,49 +49,42 @@ function CAD() {
         contar(this.usuarios, criterio, callback);
     }
 
-    // EN: servidor/cad.js
-
     function buscarOCrear(coleccion, criterio, callback) {
-        console.log("DEBUG (cad.js): Entrando en buscarOCrear. Criterio:", criterio);
-
-        // --- ¡ESTA ES LA CORRECCIÓN! ---
-        // 1. La CONSULTA (query) se basa SÓLO en el email, que es el identificador único.
         const query = { email: criterio.email };
-
-        // 2. La ACTUALIZACIÓN ($set) usa el objeto completo (email Y nombre)
         const update = { $set: criterio };
-
-        // 3. Las Opciones son las mismas (crear si no existe, devolver el doc nuevo)
         const options = {
             upsert: true,
             returnDocument: "after",
             projection: { email: 1, nombre: 1 }
         };
-        // ---------------------------------
 
-        // Usamos las nuevas variables en la llamada
         coleccion.findOneAndUpdate(query, update, options, function (err, doc) {
-
-            // Este log ahora SÍ debería aparecer
-            console.log("DEBUG (cad.js): Callback de findOneAndUpdate EJECUTADO.");
-
             if (err) {
                 console.error("DEBUG (cad.js): Error en findOneAndUpdate:", err);
-                return callback(err); // Devolvemos el error
+                return callback(err);
             }
-
-            // El PDF [cite: 397] y tu código usan doc.value, lo cual es correcto para la v4.4 del driver.
             if (doc && doc.value) {
-                console.log("DEBUG (cad.js): Usuario encontrado/creado:", doc.value);
                 callback(doc.value);
             } else {
-                // Fallback por si 'doc.value' es null (no debería pasar con 'returnDocument: "after"')
-                console.log("DEBUG (cad.js): doc.value es null. Devolviendo criterio.");
                 callback(criterio);
             }
         });
     }
 
+    function actualizar(coleccion, obj, callback) {
+        coleccion.findOneAndUpdate(
+            { _id: ObjectId(obj._id) },
+            { $set: obj },
+            { upsert: false, returnDocument: "after", projection: { email: 1 } },
+            function (err, doc) {
+                if (err) { throw err; }
+                else {
+                    console.log("Elemento actualizado");
+                    callback({ email: doc.value.email });
+                }
+            }
+        );
+    }
 
 
     function buscar(coleccion, criterio, callback) {
@@ -144,7 +142,6 @@ function CAD() {
             callback({ num: count });
         });
     }
-
 }
 
 module.exports.CAD = CAD;

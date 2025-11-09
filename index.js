@@ -40,11 +40,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // --- TAREA 2.8: Definir LocalStrategy ---
-// (Se define aquí porque necesita acceso a la instancia 'sistema')
+// Se define aquí porque tiene acceso a la instancia 'sistema'
 passport.use(new LocalStrategy(
     { usernameField: "email", passwordField: "password" },
     function (email, password, done) {
-        // sistema.loginUsuario ya usa bcrypt.compare (Tarea 2.7)
         sistema.loginUsuario({ "email": email, "password": password }, function (user) {
             if (user.email === -1) {
                 return done(null, false, { message: 'Email o contraseña incorrectos.' });
@@ -104,6 +103,25 @@ app.get("/good", function (request, response) {
     });
 });
 
+// --- TAREA 2.6.3: Ruta de Confirmación de Cuenta ---
+app.get("/confirmarUsuario/:email/:key", function (request, response) {
+    let email = request.params.email;
+    let key = request.params.key;
+
+    // Llama a la lógica de modelo.js para verificar y actualizar el estado
+    sistema.confirmarUsuario({ "email": email, "key": key }, function (usr) {
+        if (usr.email !== -1) {
+            // Si la confirmación es exitosa, se crea la sesión y redirige a Home
+            response.cookie('nick', usr.email);
+            response.redirect('/');
+        } else {
+            // Si falla (clave incorrecta, ya confirmado), redirige al login
+            response.redirect('/');
+        }
+    });
+});
+
+
 app.get("/obtenerUsuarios", function (req, res) {
     sistema.obtenerUsuarios(function (usuarios) {
         res.json(usuarios);
@@ -132,6 +150,7 @@ app.get("/ok", function (request, response) {
     response.cookie('nick', nick);
     response.send({ nick: nick });
 });
+
 
 // --- RUTA OBSOLETA ELIMINADA ---
 // app.get("/agregarUsuario/:nick", ...);
