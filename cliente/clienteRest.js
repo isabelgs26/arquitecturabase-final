@@ -1,7 +1,6 @@
 function ClienteRest(controlWeb) {
     let cw = controlWeb;
 
-    // (Se eliminan agregarUsuario y agregarUsuario2 del Sprint 1)
 
     this.obtenerUsuarios = function () {
         $.getJSON("/obtenerUsuarios", function (data) {
@@ -20,15 +19,14 @@ function ClienteRest(controlWeb) {
                 "apellidos": apellidos
             }),
             success: function (data) {
-                // Lógica de Tarea 2.5 (Éxito/Fallo)
                 if (data.nick != -1) {
                     console.log("Usuario " + data.nick + " ha sido registrado");
                     cw.limpiar();
                     cw.mostrarMensaje("Usuario registrado con éxito. Inicia sesión para acceder al sistema.", "exito");
-                    cw.mostrarAcceso(); // Requisito 1: Mostrar login
+                    cw.mostrarAcceso();
                 } else {
                     console.log("No se pudo registrar el usuario");
-                    cw.mostrarMensaje("Error: El usuario (email) ya existe", "error"); // Requisito 2: Mostrar error
+                    cw.mostrarMensaje("Error: El usuario (email) ya existe", "error");
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
@@ -43,10 +41,9 @@ function ClienteRest(controlWeb) {
     this.loginUsuario = function (email, password) {
         $.ajax({
             type: 'POST',
-            url: '/loginUsuario', // Esta ruta ahora usa Passport
+            url: '/loginUsuario',
             data: JSON.stringify({ "email": email, "password": password }),
             success: function (data) {
-                // Lógica de Tarea 2.8 (Passport)
                 if (data.nick !== "nook" && data.nick !== -1) {
                     console.log("Usuario " + data.nick + " ha iniciado sesión");
                     $.cookie("nick", data.nick);
@@ -71,7 +68,7 @@ function ClienteRest(controlWeb) {
         $.getJSON("/numeroUsuarios", function (data) {
             let numero = data && data.num !== undefined ? data.num : 0;
             if ($("#resultadoNumero").length) {
-                $("#resultadoNumero").html("Número total de usuarios (en BD): <strong>" + numero + "</strong>");
+                $("#resultadoNumero").html("Número total de usuarios: <strong>" + numero + "</strong>");
                 $("#resultadoNumero").show();
             }
         });

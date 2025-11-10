@@ -106,13 +106,7 @@ function ControlWeb() {
         cw.mostrarMensaje("Bienvenido de nuevo, " + nickUsuario, "exito");
     };
 
-    // Esta función la llama el index.html (NO USAR href="/cerrarSession")
     this.salir = function () {
-        // Esta implementación fallaba por el redirect, la quitamos.
-        // El enlace directo <a href="/cerrarSession"> es el correcto.
-
-        // (Dejamos la función vacía por si se usa en otro sitio, 
-        // pero el enlace del index.html ya funciona)
     };
 
     this.mostrarObtenerUsuarios = function () {
@@ -120,7 +114,7 @@ function ControlWeb() {
         this.mostrarBotonCerrarSesion();
         let html = `
         <div id="mOU" class="form-group">
-            <button id="btnOU" class="btn btn-info">Obtener Lista de Usuarios (de MongoDB)</button>
+            <button id="btnOU" class="btn btn-info">Obtener Lista de Usuarios</button>
             <div id="listaUsuarios" class="mt-3"></div>
         </div>`;
         $("#au").html(html);
@@ -157,7 +151,7 @@ function ControlWeb() {
         this.mostrarBotonCerrarSesion();
         let html = `
         <div id="mEU" class="form-group">
-            <label for="emailEliminar">Email a eliminar (de la BD):</label>
+            <label for="emailEliminar">Email a eliminar:</label>
             <input type="text" class="form-control" id="emailEliminar" placeholder="usuario@email.com">
             <button id="btnEU" class="btn btn-danger mt-2">Eliminar Usuario</button>
         </div>`;
@@ -175,7 +169,7 @@ function ControlWeb() {
         this.mostrarBotonCerrarSesion();
         let html = `
         <div id="mNU" class="form-group">
-            <button id="btnNU" class="btn btn-warning">Consultar Número de Usuarios (en BD)</button>
+            <button id="btnNU" class="btn btn-warning">Consultar Número de Usuarios</button>
             <div id="resultadoNumero" class="mt-3 alert alert-info" style="display:none;"></div>
         </div>`;
         $("#au").html(html);
@@ -190,7 +184,7 @@ function ControlWeb() {
         this.mostrarBotonCerrarSesion();
         let html = `
         <div id="mUA" class="form-group">
-            <label for="emailConsultar">Consultar estado de usuario (en BD por email):</label>
+            <label for="emailConsultar">Consultar estado de usuario:</label>
             <input type="text" class="form-control" id="emailConsultar" placeholder="Introduce el email">
             <button id="btnUA" class="btn btn-secondary mt-2">Consultar Estado</button>
             <div id="resultadoEstado" class="mt-3"></div>
@@ -222,7 +216,7 @@ function ControlWeb() {
             claseAlerta = "alert-danger";
         }
 
-        $("#msg").remove(); // Borra el mensaje anterior si existe
+        $("#msg").remove();
 
         let html = `<div id="msg" class="alert ${claseAlerta} alert-dismissible fade show" role="alert">
                         ${msg}
@@ -231,8 +225,6 @@ function ControlWeb() {
                         </button>
                     </div>`;
 
-        // --- ¡ESTA ES LA CORRECCIÓN! ---
-        // Lo añadimos al div #msg, que está fuera de #au y no se borra.
         $(".container").prepend(html);
     };
 }
