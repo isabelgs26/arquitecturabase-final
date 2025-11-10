@@ -1,10 +1,12 @@
 function ClienteRest(controlWeb) {
     let cw = controlWeb;
 
-
     this.obtenerUsuarios = function () {
         $.getJSON("/obtenerUsuarios", function (data) {
             console.log("Lista de usuarios:", data);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            cw.mostrarMensaje("Error al obtener usuarios. Acceso no autorizado o fallo del servidor.", "error");
+            console.error("Error al obtener usuarios:", textStatus, errorThrown);
         });
     }
 
@@ -32,7 +34,7 @@ function ClienteRest(controlWeb) {
             error: function (xhr, textStatus, errorThrown) {
                 console.log("Status: " + textStatus);
                 console.log("Error: " + errorThrown);
-                cw.mostrarMensaje("Error en el servidor. Inténtalo más tarde.", "error");
+                cw.mostrarMensaje("Error en el servidor al registrar.", "error");
             },
             contentType: 'application/json'
         });
@@ -71,6 +73,9 @@ function ClienteRest(controlWeb) {
                 $("#resultadoNumero").html("Número total de usuarios: <strong>" + numero + "</strong>");
                 $("#resultadoNumero").show();
             }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            cw.mostrarMensaje("Error de seguridad o de conexión al consultar el número de usuarios.", "error");
+            console.error("Error al obtener número de usuarios:", textStatus, errorThrown);
         });
     }
 
@@ -81,6 +86,9 @@ function ClienteRest(controlWeb) {
             } else {
                 console.log("El usuario " + email + " NO está activo");
             }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            cw.mostrarMensaje("Error de seguridad o de conexión al consultar el estado del usuario.", "error");
+            console.error("Error al obtener estado:", textStatus, errorThrown);
         });
     }
 
@@ -93,6 +101,9 @@ function ClienteRest(controlWeb) {
                 console.log("No se pudo eliminar el usuario " + email);
                 cw.mostrarMensaje("No se pudo eliminar el usuario " + email, "error");
             }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            cw.mostrarMensaje("Error de seguridad o de conexión al intentar eliminar el usuario.", "error");
+            console.error("Error al eliminar usuario:", textStatus, errorThrown);
         });
     }
 }
