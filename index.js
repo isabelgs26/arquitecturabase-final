@@ -12,6 +12,13 @@ const LocalStrategy = require('passport-local').Strategy;
 
 const sistema = new modelo.Sistema({ test: false });
 const app = express();
+const httpServer = require('http').Server(app);
+const { Server } = require("socket.io");
+
+const moduloWS = require("./servidor/servidorWS.js");
+
+let ws = new moduloWS.WSServer();
+let io = new Server();
 
 require("./servidor/passport-setup.js");
 
@@ -112,6 +119,7 @@ app.get("/good", function (request, response) {
 
     sistema.usuarioGoogle({ "email": email, "nombre": userName }, function (obj) {
         response.cookie('nick', userName);
+        response.cookie('email', obj.email);
         response.redirect('/');
     });
 });
@@ -182,12 +190,20 @@ app.get("/eliminarUsuario/:email", haIniciado, function (req, res) {
         res.json(resultado);
     });
 });
+app.get("/obtenerLogs", function (request, response) {
+    sistema.obtenerLogs(function (logs) {
+        response.json(logs);
+    });
+});
 
 sistema.inicializar().then(() => {
-    console.log("Sistema inicializado con base de datos");
-    app.listen(PORT, () => {
-        console.log(`Servidor escuchando en el puerto ${PORT}`);
+    console.log("--- SISTEMA OK: Base de Datos y Logs listos ---");
+    httpServer.listen(PORT, () => {
+        console.log(`App está escuchando en el puerto ${PORT}`);
+        console.log('Ctrl+C para salir');
     });
+    io.listen(httpServer);
+    ws.lanzarServidor(io, sistema);
 }).catch(err => {
     console.error("Error inicializando sistema:", err);
 });

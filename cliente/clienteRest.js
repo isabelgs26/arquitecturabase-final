@@ -5,7 +5,7 @@ function ClienteRest(controlWeb) {
         $.getJSON("/obtenerUsuarios", function (data) {
             console.log("Lista de usuarios:", data);
         }).fail(function (jqXHR, textStatus, errorThrown) {
-            cw.mostrarMensaje("Error al obtener usuarios. Acceso no autorizado o fallo del servidor.", "error");
+            cw.mostrarModal("Error al obtener usuarios. Acceso no autorizado o fallo del servidor.", "error");
             console.error("Error al obtener usuarios:", textStatus, errorThrown);
         });
     }
@@ -24,17 +24,16 @@ function ClienteRest(controlWeb) {
                 if (data.nick != -1) {
                     console.log("Usuario " + data.nick + " ha sido registrado");
                     cw.limpiar();
-                    cw.mostrarMensaje("Usuario registrado con éxito. Inicia sesión para acceder al sistema.", "exito");
-                    cw.mostrarAcceso();
+                    cw.mostrarModal("Usuario registrado con éxito, entra a tu correo electrónico y verifica tu cuenta", "exito"); cw.mostrarAcceso();
                 } else {
                     console.log("No se pudo registrar el usuario");
-                    cw.mostrarMensaje("Error: El usuario (email) ya existe", "error");
+                    cw.mostrarModal("Error: El usuario (email) ya existe", "error");
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
                 console.log("Status: " + textStatus);
                 console.log("Error: " + errorThrown);
-                cw.mostrarMensaje("Error en el servidor al registrar.", "error");
+                cw.mostrarModal("Error en el servidor al registrar.", "error");
             },
             contentType: 'application/json'
         });
@@ -49,18 +48,20 @@ function ClienteRest(controlWeb) {
                 if (data.nick !== "nook" && data.nick !== -1) {
                     console.log("Usuario " + data.nick + " ha iniciado sesión");
                     $.cookie("nick", data.nick);
+                    ws.email = email;
+                    $.cookie("email", email);
                     cw.limpiar();
                     cw.mostrarHome(data.nick);
                 }
                 else {
                     console.log("Usuario o clave incorrectos");
-                    cw.mostrarMensaje("Email o contraseña incorrectos", "error");
+                    cw.mostrarModal("Email o contraseña incorrectos", "error");
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
                 console.log("Status: " + textStatus);
                 console.log("Error: " + errorThrown);
-                cw.mostrarMensaje("Error en el servidor al iniciar sesión.", "error");
+                cw.mostrarModal("Error en el servidor al iniciar sesión.", "error");
             },
             contentType: 'application/json'
         });
@@ -74,7 +75,7 @@ function ClienteRest(controlWeb) {
                 $("#resultadoNumero").show();
             }
         }).fail(function (jqXHR, textStatus, errorThrown) {
-            cw.mostrarMensaje("Error de seguridad o de conexión al consultar el número de usuarios.", "error");
+            cw.mostrarModal("Error de seguridad o de conexión al consultar el número de usuarios.", "error");
             console.error("Error al obtener número de usuarios:", textStatus, errorThrown);
         });
     }
@@ -87,7 +88,7 @@ function ClienteRest(controlWeb) {
                 console.log("El usuario " + email + " NO está activo");
             }
         }).fail(function (jqXHR, textStatus, errorThrown) {
-            cw.mostrarMensaje("Error de seguridad o de conexión al consultar el estado del usuario.", "error");
+            cw.mostrarModal("Error de seguridad o de conexión al consultar el estado del usuario.", "error");
             console.error("Error al obtener estado:", textStatus, errorThrown);
         });
     }
@@ -96,13 +97,13 @@ function ClienteRest(controlWeb) {
         $.getJSON("/eliminarUsuario/" + email, function (data) {
             if (data.eliminado > 0) {
                 console.log("Usuario " + email + " eliminado correctamente");
-                cw.mostrarMensaje("Usuario " + email + " eliminado de la BD", "exito");
+                cw.mostrarModal("Usuario " + email + " eliminado de la BD", "exito");
             } else {
                 console.log("No se pudo eliminar el usuario " + email);
-                cw.mostrarMensaje("No se pudo eliminar el usuario " + email, "error");
+                cw.mostrarModal("No se pudo eliminar el usuario " + email, "error");
             }
         }).fail(function (jqXHR, textStatus, errorThrown) {
-            cw.mostrarMensaje("Error de seguridad o de conexión al intentar eliminar el usuario.", "error");
+            cw.mostrarModal("Error de seguridad o de conexión al intentar eliminar el usuario.", "error");
             console.error("Error al eliminar usuario:", textStatus, errorThrown);
         });
     }

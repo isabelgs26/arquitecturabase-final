@@ -1,19 +1,34 @@
 function CAD() {
     const mongo = require("mongodb").MongoClient;
     const ObjectId = require("mongodb").ObjectId;
+    const gv = require('./gestorVariables.js');
 
     this.usuarios = null;
+    this.logs = null;
+    this.partidas = null;
 
     this.conectar = async function () {
         let cad = this;
-        const mongoUrl = process.env.MONGODB_URI;
+
+        const mongoUrl = await gv.obtenerMongoURI();
+
+        if (!mongoUrl) {
+            console.error("Error: MONGODB_URI no se pudo cargar desde Secret Manager.");
+            throw new Error("No se pudo conectar a la base de datos");
+        }
+
         let client = new mongo(mongoUrl, { useUnifiedTopology: true });
 
         try {
             await client.connect();
             const database = client.db("sistema");
             cad.usuarios = database.collection("usuarios");
-            console.log("Conexión a BD (cad.js) exitosa y 'cad.usuarios' asignado.");
+            cad.logs = database.collection("logs");
+            cad.partidas = database.collection("partidas");
+
+            console.log("Conexión a MongoDB establecida (Usuarios y Logs listos).");
+
+
         } catch (err) {
             console.error("Error al conectar a MongoDB (cad.js):", err);
             throw new Error("No se pudo conectar a la base de datos");
@@ -27,7 +42,6 @@ function CAD() {
     this.actualizarUsuario = function (obj, callback) {
         actualizar(this.usuarios, obj, callback);
     }
-
 
     this.buscarUsuario = function (criterio, callback) {
         buscar(this.usuarios, criterio, callback);
@@ -48,6 +62,66 @@ function CAD() {
     this.contarUsuarios = function (criterio, callback) {
         contar(this.usuarios, criterio, callback);
     }
+
+    this.insertarLog = function (registro, callback) {
+        insertar(this.logs, registro, callback);
+    }
+
+    this.obtenerLogs = function (callback) {
+        if (!this.logs) return callback([]);
+        this.logs.find({}).toArray(function (err, result) {
+            if (err) {
+                console.error("Error al obtener logs:", err);
+                return callback([]);
+            }
+            callback(result);
+        });
+    }
+
+    this.insertarPartida = function (partida, callback) {
+        insertar(this.partidas, partida, callback);
+    }
+
+    this.obtenerPartida = function (codigo, callback) {
+        buscar(this.partidas, { codigo: codigo }, callback);
+    }
+
+    this.eliminarPartida = function (codigo, callback) {
+        eliminarUno(this.partidas, { codigo: codigo }, callback);
+    }
+
+    this.actualizarPartida = function (codigo, actualizacion, callback) {
+        this.partidas.findOneAndUpdate(
+            { codigo: codigo },
+            { $set: actualizacion },
+            { returnDocument: "after" },
+            function (err, doc) {
+                if (err) {
+                    console.error("Error actualizando partida:", err);
+                    return callback(null);
+                }
+                callback(doc.value);
+            }
+        );
+    }
+
+
+    this.obtenerPartidasDisponibles = function (callback) {
+        if (!this.partidas) return callback([]);
+
+        this.partidas.find({
+            $expr: { $lt: [{ $size: "$jugadores" }, "$maxJug"] }
+        }).toArray(function (err, result) {
+            if (err) {
+                console.error("Error al obtener partidas disponibles:", err);
+                return callback([]);
+            }
+            callback(result);
+        });
+    }
+
+
+    // --- FUNCIONES PRIVADAS ---
 
     function buscarOCrear(coleccion, criterio, callback) {
         const query = { email: criterio.email };
@@ -110,14 +184,16 @@ function CAD() {
     }
 
     function insertar(coleccion, elemento, callback) {
-        if (!coleccion) { return callback(new Error("ColeScción no inicializada")); }
+        if (!coleccion) { return callback(new Error("Colección no inicializada")); }
         coleccion.insertOne(elemento, function (err, result) {
             if (err) {
                 console.error("Error en 'insertar' (cad.js):", err);
-                return callback(null);
+                // Si hay callback, lo llamamos con null o error
+                if (callback) return callback(null);
+                else return;
             }
             console.log("Nuevo elemento creado");
-            callback(elemento);
+            if (callback) callback(elemento);
         });
     }
 
